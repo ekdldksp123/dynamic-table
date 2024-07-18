@@ -1,0 +1,16 @@
+# EditorConfig is awesome: https://editorconfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Matches multiple files with brace expansion notation
+# Set default charset
+[*.{js,css,ts,tsx,json}]
+charset = utf-8
+end_of_line = lf
+
+# 자바스크립트 소스는 ESLint에서 똑같은 옵션을 사용하고 있어서 분리함
+[*.{css,json}]
+indent_style = space
+indent_size = 2
+insert_final_newline = true
