@@ -14,7 +14,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as ReportsIndexImport } from './routes/reports/index'
-import { Route as ReportsReportsIdIndexImport } from './routes/reports/$reportsId/index'
+import { Route as ReportsReportIdIndexImport } from './routes/reports/$reportId/index'
 
 // Create Virtual Routes
 
@@ -32,8 +32,8 @@ const ReportsIndexRoute = ReportsIndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const ReportsReportsIdIndexRoute = ReportsReportsIdIndexImport.update({
-  path: '/reports/$reportsId/',
+const ReportsReportIdIndexRoute = ReportsReportIdIndexImport.update({
+  path: '/reports/$reportId/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -55,11 +55,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsIndexImport
       parentRoute: typeof rootRoute
     }
-    '/reports/$reportsId/': {
-      id: '/reports/$reportsId/'
-      path: '/reports/$reportsId'
-      fullPath: '/reports/$reportsId'
-      preLoaderRoute: typeof ReportsReportsIdIndexImport
+    '/reports/$reportId/': {
+      id: '/reports/$reportId/'
+      path: '/reports/$reportId'
+      fullPath: '/reports/$reportId'
+      preLoaderRoute: typeof ReportsReportIdIndexImport
       parentRoute: typeof rootRoute
     }
   }
@@ -70,7 +70,7 @@ declare module '@tanstack/react-router' {
 export const routeTree = rootRoute.addChildren({
   IndexLazyRoute,
   ReportsIndexRoute,
-  ReportsReportsIdIndexRoute,
+  ReportsReportIdIndexRoute,
 })
 
 /* prettier-ignore-end */
@@ -83,7 +83,7 @@ export const routeTree = rootRoute.addChildren({
       "children": [
         "/",
         "/reports/",
-        "/reports/$reportsId/"
+        "/reports/$reportId/"
       ]
     },
     "/": {
@@ -92,8 +92,8 @@ export const routeTree = rootRoute.addChildren({
     "/reports/": {
       "filePath": "reports/index.tsx"
     },
-    "/reports/$reportsId/": {
-      "filePath": "reports/$reportsId/index.tsx"
+    "/reports/$reportId/": {
+      "filePath": "reports/$reportId/index.tsx"
     }
   }
 }
