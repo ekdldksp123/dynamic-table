@@ -1,23 +1,46 @@
-export type ReportGroup = {
-  id: number;
-  order: number;
-  axis: string;
-  show_totals: boolean;
-  label: string;
-};
+export interface ILineItemGroup {
+  groupId: string;
+  name: string;
+  index: number;
+  axis?: Axis;
+  show_totals?: boolean;
+  // values: string | number | null[];
+}
 
-export type AccountGroup = {
+export type Axis = 'column' | 'row';
+// 값
+export interface ILineItem {
   code: string;
-  groups: {
-    id: number;
-    groupId: number;
-    value: string;
-  }[];
-};
+  name: string;
+  [key: string]: GroupItemValue;
+  base: string[];
+}
 
-// Report Group + Account Group
-export type ReportAccount = {
+export type GroupItemValue = string | string[] | number | null;
+export interface IReport {
   id: number;
-  code: string;
-  label: string;
-};
+  name: string;
+  created_at?: string;
+  items: ILineItem[];
+  contents: IGridData;
+}
+
+export interface IGridData {
+  header: IGridHeader;
+  columns: IGridColumn[];
+  rows: unknown[];
+}
+
+export interface IGridHeader {
+  height: number;
+  complexColumns: IGridComplexColumn[];
+}
+
+export interface IGridColumn {
+  header: string;
+  name: string;
+}
+
+export interface IGridComplexColumn extends IGridColumn {
+  childNames: string[];
+}
