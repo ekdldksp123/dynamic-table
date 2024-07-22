@@ -6,9 +6,8 @@ import { ReportProps } from '@/routes/reports/$reportId';
 import Grid from '@toast-ui/react-grid';
 // import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { v4 as uuidv4 } from 'uuid';
-// import { VscDiffRemoved } from 'react-icons/vsc';
 import update from 'immutability-helper';
-import { VscDiffAdded } from 'react-icons/vsc';
+import { VscDiffAdded, VscDiffRemoved } from 'react-icons/vsc';
 
 import 'tui-grid/dist/tui-grid.css';
 import { GroupCard } from '../ui/card';
@@ -85,6 +84,24 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [moveColGroup],
   );
 
+  const deleteGroup = useCallback(() => {
+    const lastKey = lineItemGroups[lineItemGroups.length - 1].groupId;
+    setLineItemsGroups((prev) => {
+      return prev.slice(0, -1);
+    });
+    setLineItems((prev) =>
+      prev.map((item) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [lastKey]: _, ...rest } = item;
+        return rest as unknown as ILineItem;
+      }),
+    );
+  }, [lineItemGroups]);
+
+  const customFields = useMemo(() => {
+    return lineItems.filter((item) => item.isCustom === true);
+  }, [lineItems]);
+
   useEffect(() => {
     const rows = lineItemGroups.filter((group) => group.axis === 'row').sort((a, b) => b.index - a.index);
     if (rows.length) {
@@ -95,10 +112,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
       setColGroup([...cols]);
     }
   }, [lineItemGroups]);
-
-  const customFields = useMemo(() => {
-    return lineItems.filter((item) => item.isCustom === true);
-  }, [lineItems]);
 
   return (
     <div className='p-5 bg-gray-100'>
@@ -117,21 +130,26 @@ export const Report: FC<ReportProps> = ({ route }) => {
                         {header}
                       </th>
                     ))}
-                    {lineItemGroups.map((group) => (
+                    {lineItemGroups.map((group, index) => (
                       <th key={`group-${group.name}`} className='bg-gray-200 h-[30px]'>
-                        <Input
-                          type='text'
-                          className='h-[85%]'
-                          placeholder={`Group ${lineItemGroups.length}`}
-                          value={group.name}
-                          onChange={(event) => {
-                            setLineItemsGroups((prev) => {
-                              const ig = prev.find((ig) => ig.groupId === group.groupId);
-                              if (ig) ig.name = event.target.value;
-                              return [...prev];
-                            });
-                          }}
-                        />
+                        <div className='w-[100%] relative flex items-center gap-2'>
+                          <Input
+                            type='text'
+                            className='w-[85%]'
+                            placeholder={`Group ${lineItemGroups.length}`}
+                            value={group.name}
+                            onChange={(event) => {
+                              setLineItemsGroups((prev) => {
+                                const ig = prev.find((ig) => ig.groupId === group.groupId);
+                                if (ig) ig.name = event.target.value;
+                                return [...prev];
+                              });
+                            }}
+                          />
+                          {index === lineItemGroups.length - 1 ? (
+                            <VscDiffRemoved className='absolute right-0 cursor-pointer' onClick={deleteGroup} />
+                          ) : null}
+                        </div>
                       </th>
                     ))}
                     <th key='add-group-btn' className='bg-gray-200 h-[30px]'>
@@ -184,6 +202,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                                 <td key={`group-data-${key}`}>
                                   <Input
                                     value={value || ''}
+                                    className='w-[85%]'
                                     onChange={(e) => {
                                       setLineItems((prev) => {
                                         return prev.map((item, i) => {
