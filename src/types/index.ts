@@ -13,9 +13,14 @@ export interface ILineItem {
   [key: string]: GroupItemValue;
   base: string[];
   isCustom: boolean;
+  value: string | number;
 }
 
 export type GroupItemValue = string | string[] | number | boolean | null;
+
+export type GroupedData = {
+  [key: string]: GroupedData | ILineItem[];
+};
 export interface IReport {
   id: number;
   name: string;

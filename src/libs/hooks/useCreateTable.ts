@@ -1,93 +1,94 @@
-import { GroupItemValue, IGridColumn, ILineItem, ILineItemGroup } from '@/types';
+import { GroupedData, IGridColumn, IGridComplexColumn, IGridHeader, ILineItem, ILineItemGroup } from '@/types';
+import { groupByHierarchical } from '../utils';
 
 interface IGetTableData {
   lineItems: ILineItem[];
-  lineItemGroups: ILineItemGroup[];
+  colGroup: ILineItemGroup[];
+  rowGroup: ILineItemGroup[];
 }
-
 export const useCreateTable = () => {
-  const getTableData = ({ lineItems, lineItemGroups }: IGetTableData) => {
-    const colGroup = lineItemGroups.filter((group) => group.axis === 'column').sort((a, b) => a.index - b.index);
-    const rowGroup = lineItemGroups.filter((group) => group.axis === 'row').sort((a, b) => a.index - b.index);
-
+  const getTableData = ({ lineItems, colGroup, rowGroup }: IGetTableData) => {
+    console.log({ colGroup, rowGroup });
     if (!colGroup.length && !rowGroup.length && lineItems.length) {
       //lineItems 그대로 뿌려준다
       return {
-        cols: [],
-        rows: [],
+        columns: [],
+        data: [],
       };
     }
 
-    const groupValuesMap = getGroupValues({ lineItems, lineItemGroups });
+    // const groupValuesMap = getGroupValues({ lineItems, lineItemGroups: colGroup.concat(rowGroup) });
+
+    // console.log({ groupValuesMap });
 
     // 피봇 테이블 x
     if (!colGroup.length && rowGroup.length && lineItems.length) {
       return {
-        cols: [],
-        rows: [],
+        columns: [],
+        data: [],
       };
     }
 
     // 피봇 테이블 o
     if (colGroup.length && rowGroup.length && lineItems.length) {
       // 행과 열 그룹별로 컬럼과 행을 구성
-      const columns: IGridColumn[] = [
-        { header: rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name, name: 'division' },
-      ];
 
-      for (const column of colGroup) {
-        groupValuesMap[column.groupId].forEach((v, i) => {
-          if (v) {
-            columns.push({ header: v.toString(), name: `col ${i + 1}` });
-          }
-        });
-      }
+      // const complexColumns: IGridComplexColumn[] = [];
+      const groupedData: GroupedData = groupByHierarchical(
+        lineItems,
+        colGroup.map((group) => group.groupId),
+      );
+
+      const { columns, complexColumns } = transformToGridColumns(groupedData);
+      columns.unshift({ header: rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name, name: 'division' });
+
+      const header: IGridHeader = { height: 50 * colGroup.length, complexColumns };
+      // console.log({ columns, header });
       return {
-        cols: [],
-        rows: [],
+        header,
+        columns,
+        data: [],
       };
     }
 
-    // // console.log({ groupValues });
-
-    // const colGroup = reportGroups.filter((rg) => rg.axis === 'column').sort((a, b) => a.order - b.order);
-    // const rowGroup = reportGroups.filter((rg) => rg.axis === 'row').sort((a, b) => a.order - b.order);
-
-    // console.log({ colGroup, rowGroup });
-
-    // const columns: IGridColumn[] = [{ header: '구분', name: 'group1' }];
-    // const header: IGridHeader = { height: 50 * colGroup.length, complexColumns: [] };
-
-    // if (colGroup.length > 1) {
-    //   const lastColGroupId = colGroup[colGroup.length - 1].id;
-    //   const lastColumns = groupValues.filter((v) => v.groupId === lastColGroupId);
-    // }
-
-    // // const complexColumns =
-    // console.log({ columns });
-
     return {
-      cols: [],
-      rows: [],
+      columns: [],
+      data: [],
     };
   };
-  return { getTableData };
-};
 
-const getGroupValues = ({ lineItems, lineItemGroups }: IGetTableData) => {
-  // 각 그룹별로 유니크한 값 구하기
-  const groupValuesMap: Record<string, GroupItemValue[]> = {};
-  for (const group of lineItemGroups) {
-    const groupId = group.groupId;
-    for (const item of lineItems) {
-      const groupValues: GroupItemValue[] = [...groupValuesMap[groupId]];
-      const itemValue = item[groupId];
+  const transformToGridColumns = (
+    groupedData: GroupedData,
+  ): { columns: IGridColumn[]; complexColumns: IGridComplexColumn[] } => {
+    const columns: IGridColumn[] = [];
+    const complexColumns: IGridComplexColumn[] = [];
 
-      if (!groupValues.includes(itemValue)) {
-        groupValues.push(itemValue);
+    const traverse = (data: GroupedData | ILineItem[], parentName: string | null) => {
+      if (Array.isArray(data)) {
+        return;
       }
-      groupValuesMap[groupId] = groupValues;
-    }
-  }
-  return groupValuesMap;
+
+      Object.keys(data).forEach((key) => {
+        const childName = parentName ? `${parentName}_${key}` : key;
+        columns.push({ header: key, name: childName });
+
+        if (parentName) {
+          const existingComplexColumn = complexColumns.find((col) => col.name === parentName);
+          if (existingComplexColumn) {
+            existingComplexColumn.childNames.push(childName);
+          } else {
+            complexColumns.push({ header: parentName, name: parentName, childNames: [childName] });
+          }
+        }
+
+        traverse(data[key] as GroupedData, childName);
+      });
+    };
+
+    traverse(groupedData, null);
+
+    return { columns: columns.filter((v) => !complexColumns.find((c) => v.header === c.header)), complexColumns };
+  };
+
+  return { getTableData };
 };

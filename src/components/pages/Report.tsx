@@ -1,15 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GroupItemValue, ILineItem, ILineItemGroup, IReport } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ReportProps } from '@/routes/reports/$reportId';
 import Grid from '@toast-ui/react-grid';
-// import { useCreateTable } from '@/libs/hooks/useCreateTable';
+import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { v4 as uuidv4 } from 'uuid';
 import update from 'immutability-helper';
 import { VscDiffAdded, VscDiffRemoved } from 'react-icons/vsc';
 
-import 'tui-grid/dist/tui-grid.css';
 import { GroupCard } from '../ui/card';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import 'tui-grid/dist/tui-grid.css';
 
 const headers = ['Code', 'Name'];
 
@@ -34,7 +35,11 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [colGroup, setColGroup] = useState<ILineItemGroup[]>([]);
   const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([]);
 
-  // const lineItemKeys = useMemo(() => (lineItems.length ? Object.keys(lineItems[0]) : []), [lineItems]);
+  const { getTableData } = useCreateTable();
+
+  const { header, columns } = useMemo(() => {
+    return getTableData({ lineItems, colGroup, rowGroup });
+  }, [colGroup, getTableData, lineItems, rowGroup]);
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -103,14 +108,18 @@ export const Report: FC<ReportProps> = ({ route }) => {
   }, [lineItems]);
 
   useEffect(() => {
-    const rows = lineItemGroups.filter((group) => group.axis === 'row').sort((a, b) => b.index - a.index);
-    if (rows.length) {
-      setRowGroup([...rows]);
+    const rows = [];
+    const cols = [];
+    for (const group of lineItemGroups) {
+      if (group.axis === 'row') {
+        rows.push(group);
+      } else if (group.axis === 'column') {
+        cols.push(group);
+      }
     }
-    const cols = lineItemGroups.filter((group) => group.axis === 'column').sort((a, b) => b.index - a.index);
-    if (cols.length) {
-      setColGroup([...cols]);
-    }
+
+    if (rows.length) setRowGroup(rows);
+    if (cols.length) setColGroup(cols);
   }, [lineItemGroups]);
 
   return (
@@ -161,12 +170,20 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             name: `Group ${lineItemGroups.length + 1}`,
                             index: lineItemGroups.length,
                             show_totals: false,
-                            axis: 'row',
                           };
                           setLineItemsGroups((prev) => [...prev, newItem]);
                           setLineItems((prev) =>
-                            prev.map((item) => {
-                              item[groupId] = null;
+                            prev.map((item, i) => {
+                              item[groupId] =
+                                lineItemGroups.length === 0
+                                  ? item.name.split('_')[0]
+                                  : lineItemGroups.length === 1
+                                    ? item.name === prev[i - 1]?.name
+                                      ? '부채'
+                                      : '자산'
+                                    : item.name.split('_')[1] === '매매'
+                                      ? '매매목적'
+                                      : '위험회피목적';
                               return item;
                             }),
                           );
@@ -241,51 +258,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
           </section>
         </section>
         <p className='mt-5 text-lg font-bold'>Preview</p>
-        <Grid
-          data={[]}
-          columns={[
-            {
-              header: '구분',
-              name: 'group1',
-            },
-            {
-              header: '자산',
-              name: 'col1',
-            },
-            {
-              header: '부채',
-              name: 'col2',
-            },
-            {
-              header: '자산',
-              name: 'col3',
-            },
-            {
-              header: '부채',
-              name: 'col4',
-            },
-          ]}
-          header={{
-            height: 100, // 50 * 컬럼 group length
-            complexColumns: [
-              {
-                header: '매매목적',
-                name: 'group2',
-                childNames: ['col1', 'col2'],
-              },
-              {
-                header: '위험회피목적',
-                name: 'group3',
-                childNames: ['col3', 'col4'],
-              },
-            ],
-          }}
-          columnOptions={{ resizable: true }}
-          rowHeight={25}
-          //   bodyHeight={100}
-          //   heightResizable={true}
-          //   rowHeaders={['rowNum']}
-        />
       </div>
     </div>
   );
@@ -300,33 +272,35 @@ interface DraggableCardListProps {
 }
 
 const DraggableCardList: FC<DraggableCardListProps> = ({ title, children, groups, customFields, setGroups }) => {
-  const onSelectHandler = useCallback(
-    (value: string) => {
-      if (value.length > 9) {
-        //group case
+  const [target, setTarget] = useState<string>();
+  const onAddHandler = useCallback(() => {
+    if (!target) return;
+    if (target.length > 9) {
+      //group case
 
-        const targetIndex = groups.findIndex((g) => g.groupId === value);
-        if (targetIndex !== -1) {
-          const targetGroup = groups[targetIndex];
-          if (title === 'Row' && targetGroup.axis === 'column') {
-            targetGroup.axis = 'row';
-            setGroups((prev: ILineItemGroup[]) => {
-              return [...prev.slice(0, targetIndex), targetGroup, ...prev.slice(targetIndex + 1)];
-            });
-          } else if (title === 'Column' && targetGroup.axis === 'row') {
-            targetGroup.axis = 'column';
-            setGroups((prev: ILineItemGroup[]) => {
-              return [...prev.slice(0, targetIndex), targetGroup, ...prev.slice(targetIndex + 1)];
-            });
-          }
+      const targetIndex = groups.findIndex((g) => g.groupId === target);
+      if (targetIndex !== -1) {
+        const targetGroup = groups[targetIndex];
+        if (title === 'Row' && targetGroup.axis !== 'row') {
+          targetGroup.axis = 'row';
+          setGroups((prev) => {
+            prev[targetIndex] = targetGroup;
+            return [...prev];
+          });
+        } else if (title === 'Column' && targetGroup.axis !== 'column') {
+          targetGroup.axis = 'column';
+          setGroups((prev: ILineItemGroup[]) => {
+            prev[targetIndex] = targetGroup;
+            return [...prev];
+          });
         }
-      } else {
-        //custom field case
-        //TODO
       }
-    },
-    [groups, setGroups, title],
-  );
+    } else {
+      //custom field case
+      //TODO
+    }
+    return setTarget(undefined);
+  }, [groups, setGroups, target, title]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -334,7 +308,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({ title, children, groups
         <div className='mb-3 w-[100%] relative flex items-center'>
           <p className='text-lg font-bold text-center'>{title}</p>
           <div className='absolute right-0 flex items-center gap-2'>
-            <Select onValueChange={onSelectHandler}>
+            <Select onValueChange={setTarget} value={target}>
               <SelectTrigger className='w-[180px]'>
                 <SelectValue placeholder={title === 'Row' ? '행을 선택하세요' : '열을 선택하세요'} />
               </SelectTrigger>
@@ -363,7 +337,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({ title, children, groups
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <VscDiffAdded className='cursor-pointer' />
+            <VscDiffAdded className='cursor-pointer' onClick={onAddHandler} />
           </div>
         </div>
         <div className='flex flex-col gap-3'>{children}</div>
