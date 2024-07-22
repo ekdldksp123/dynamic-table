@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ILineItemGroup } from '@/types';
+import classNames from 'classnames';
 import { FC, useRef } from 'react';
-import { useDrop, DropTargetMonitor, useDrag } from 'react-dnd';
+import { useDrop, DropTargetMonitor, useDrag, DragSourceMonitor } from 'react-dnd';
 
 interface GroupCardProps {
+  id: string;
   group: ILineItemGroup;
   index: number;
   onMoveGroup: (dragIndex: number, hoverIndex: number) => void;
@@ -19,8 +21,9 @@ const ItemTypes = {
   CARD: 'card',
 };
 
-export const GroupCard: FC<GroupCardProps> = ({ group, index, onMoveGroup }) => {
-  const ref = useRef<HTMLLIElement>(null);
+export const GroupCard: FC<GroupCardProps> = ({ id, group, index, onMoveGroup }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
   const [, drop] = useDrop({
     accept: ItemTypes.CARD,
     hover(item: unknown, monitor: DropTargetMonitor) {
@@ -56,20 +59,21 @@ export const GroupCard: FC<GroupCardProps> = ({ group, index, onMoveGroup }) => 
           return;
         }
       }
+      console.log('move');
       onMoveGroup(dragIndex, hoverIndex);
 
       (item as DragItem).index = hoverIndex;
     },
   });
 
-  const [{ _isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.CARD,
     item: {
       type: ItemTypes.CARD,
-      id: group.groupId,
+      id,
       index,
     },
-    collect: (monitor: any) => ({
+    collect: (monitor: DragSourceMonitor) => ({
       isDragging: monitor.isDragging(),
     }),
   });
@@ -78,14 +82,9 @@ export const GroupCard: FC<GroupCardProps> = ({ group, index, onMoveGroup }) => 
 
   return (
     <div
-      key={`group-${group.groupId}`}
-      className='px-5 py-1 bg-indigo-200'
-      draggable='true'
-      data-groupId={group.groupId}
-      onDragStart={(event) => {
-        event.currentTarget.classList.add('dragging');
-        event.dataTransfer.setData('data', group.groupId);
-      }}
+      ref={ref}
+      key={`group-card-${group.groupId}`}
+      className={classNames('px-5 py-1 bg-indigo-200 cursor-pointer opacity-100', isDragging ? '!opacity-50' : '')}
     >
       {group.name}
     </div>

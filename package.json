@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slot": "^1.1.0",
     "@supabase/supabase-js": "^2.44.4",
     "@tanstack/react-query": "^5.51.8",
     "@tanstack/react-router": "^1.45.4",
     "@toast-ui/react-grid": "^4.21.22",
     "class-variance-authority": "^0.7.0",
+    "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "immutability-helper": "^3.1.1",
     "json-server": "^1.0.0-beta.1",

@@ -4,19 +4,18 @@ export interface ILineItemGroup {
   index: number;
   axis?: Axis;
   show_totals?: boolean;
-  // values: string | number | null[];
 }
 
 export type Axis = 'column' | 'row';
-// 값
 export interface ILineItem {
   code: string;
   name: string;
   [key: string]: GroupItemValue;
   base: string[];
+  isCustom: boolean;
 }
 
-export type GroupItemValue = string | string[] | number | null;
+export type GroupItemValue = string | string[] | number | boolean | null;
 export interface IReport {
   id: number;
   name: string;
