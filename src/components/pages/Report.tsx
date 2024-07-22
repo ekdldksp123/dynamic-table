@@ -34,7 +34,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [colGroup, setColGroup] = useState<ILineItemGroup[]>([]);
   const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([]);
 
-  const lineItemKeys = useMemo(() => (lineItems.length ? Object.keys(lineItems[0]) : []), [lineItems]);
+  // const lineItemKeys = useMemo(() => (lineItems.length ? Object.keys(lineItems[0]) : []), [lineItems]);
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -138,11 +138,14 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             className='w-[85%]'
                             placeholder={`Group ${lineItemGroups.length}`}
                             value={group.name}
-                            onChange={(event) => {
+                            onChange={(e) => {
                               setLineItemsGroups((prev) => {
-                                const ig = prev.find((ig) => ig.groupId === group.groupId);
-                                if (ig) ig.name = event.target.value;
-                                return [...prev];
+                                const newGroups = [...prev];
+                                newGroups[index] = {
+                                  ...newGroups[index],
+                                  name: e.target.value,
+                                };
+                                return newGroups;
                               });
                             }}
                           />
@@ -185,38 +188,30 @@ export const Report: FC<ReportProps> = ({ route }) => {
                     lineItems.map((item, index) => {
                       return (
                         <tr key={uuidv4()} className='border-b border-b-double border-b-neutral-200'>
-                          {lineItemKeys.map((key) => {
-                            const value = item[key] as unknown as Exclude<GroupItemValue, boolean>;
-                            if (key === 'code') {
-                              return <td className='px-5'>{value}</td>;
-                            } else if (key === 'name') {
-                              return (
-                                <td className='px-5 text-center border-r border-r-double border-r-neutral-200'>
-                                  {value}
-                                </td>
-                              );
-                            } else if (key === 'base' || key === 'isCustom') {
-                              return null;
-                            } else {
-                              return (
-                                <td key={`group-data-${key}`}>
-                                  <Input
-                                    value={value || ''}
-                                    className='w-[85%]'
-                                    onChange={(e) => {
-                                      setLineItems((prev) => {
-                                        return prev.map((item, i) => {
-                                          if (i === index) {
-                                            item[key] = e.target.value;
-                                          }
-                                          return item;
-                                        });
+                          <td className='px-5'>{item.code}</td>
+                          <td className='px-5 text-center border-r border-r-double border-r-neutral-200'>
+                            {item.name}
+                          </td>
+                          {lineItemGroups.map(({ groupId }) => {
+                            const value = item[groupId] as unknown as Exclude<GroupItemValue, boolean>;
+                            return (
+                              <td key={`${item.code}:${groupId}`}>
+                                <Input
+                                  value={value || ''}
+                                  className='w-[85%]'
+                                  onChange={(e) => {
+                                    setLineItems((prev) => {
+                                      return prev.map((item, i) => {
+                                        if (i === index) {
+                                          item[groupId] = e.target.value;
+                                        }
+                                        return item;
                                       });
-                                    }}
-                                  />
-                                </td>
-                              );
-                            }
+                                    });
+                                  }}
+                                />
+                              </td>
+                            );
                           })}
                           <td className='px-5'></td>
                           <td className='px-5'>{item.base}</td>
