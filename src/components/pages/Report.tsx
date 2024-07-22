@@ -131,7 +131,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                       </th>
                     ))}
                     {lineItemGroups.map((group, index) => (
-                      <th key={`group-${group.name}`} className='bg-gray-200 h-[30px]'>
+                      <th key={`group-${group.groupId}`} className='bg-gray-200 h-[30px]'>
                         <div className='w-[100%] relative flex items-center gap-2'>
                           <Input
                             type='text'
@@ -140,12 +140,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             value={group.name}
                             onChange={(e) => {
                               setLineItemsGroups((prev) => {
-                                const newGroups = [...prev];
-                                newGroups[index] = {
-                                  ...newGroups[index],
-                                  name: e.target.value,
-                                };
-                                return newGroups;
+                                const targetGroup = prev.find((g) => g.groupId === group.groupId);
+                                if (targetGroup) targetGroup.name = e.target.value;
+                                return [...prev];
                               });
                             }}
                           />
@@ -187,7 +184,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                   {lineItems.length &&
                     lineItems.map((item, index) => {
                       return (
-                        <tr key={uuidv4()} className='border-b border-b-double border-b-neutral-200'>
+                        <tr key={`item-${index}`} className='border-b border-b-double border-b-neutral-200'>
                           <td className='px-5'>{item.code}</td>
                           <td className='px-5 text-center border-r border-r-double border-r-neutral-200'>
                             {item.name}
