@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { GroupItemValue, ILineItem, ILineItemGroup, IReport } from '@/types';
+import { ItemValueType, ILineItem, ILineItemGroup, IReport } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -206,7 +206,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             {item.name}
                           </td>
                           {lineItemGroups.map(({ groupId }) => {
-                            const value = item[groupId] as unknown as Exclude<GroupItemValue, boolean>;
+                            const value = item[groupId] as unknown as Exclude<ItemValueType, boolean>;
                             return (
                               <td key={`${item.code}:${groupId}`}>
                                 <Input

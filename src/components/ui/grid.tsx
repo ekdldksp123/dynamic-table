@@ -19,6 +19,13 @@ const defaultColDef = {
 };
 
 export const Grid: FC<GridProps> = ({ columnDefs, rowData, onGridReady }) => {
+  //   const onGridReady = () => {
+  //     fetch('https://www.ag-grid.com/example-assets/olympic-winners.json')
+  //       .then((resp) => resp.json())
+  //       .then((data) => {
+  //         console.log(data);
+  //       });
+  //   };
   return (
     <div className='w-[100%] h-[500px]'>
       <div className='ag-theme-quartz w-[100%] h-[100%]'>

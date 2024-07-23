@@ -10,22 +10,26 @@ export type Axis = 'column' | 'row';
 export interface ILineItem {
   code: string;
   name: string;
-  [key: string]: GroupItemValue;
+  [key: string]: ItemValueType;
   base: string[];
   isCustom: boolean;
   value: string | number;
 }
 
-export type GroupItemValue = string | string[] | number | boolean | null;
+export type ItemValueType = string | string[] | number | boolean | null;
 
 export type GroupedData = {
   [key: string]: GroupedData | ILineItem[];
 };
 
 export type GridColumnDef = {
-  headerName: string;
+  headerName?: string;
   field?: string;
   children?: GridColumnDef[];
+};
+
+export type GridRowData = {
+  [key: string]: ItemValueType;
 };
 
 export interface IReport {
