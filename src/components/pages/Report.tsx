@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ItemValueType, ILineItem, ILineItemGroup, IReport } from '@/types';
+import { ItemValueType, ILineItem, ILineItemGroup, IReport, GridColumnDef } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,11 +34,59 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [colGroup, setColGroup] = useState<ILineItemGroup[]>([]);
   const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([]);
 
-  const { getTableData } = useCreateTable();
+  const { getPivotGridData } = useCreateTable();
 
   const { columns, rows } = useMemo(() => {
-    return getTableData({ lineItems, colGroup, rowGroup });
-  }, [colGroup, getTableData, lineItems, rowGroup]);
+    // 행열이 정의 되어있지 않은 경우
+    if (!colGroup.length && !rowGroup.length && lineItems.length) {
+      //lineItems 그대로 뿌려준다
+      const columns: GridColumnDef[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
+        return {
+          headerName: typeof col === 'string' ? col : col.name,
+          field: typeof col === 'string' ? col.toLowerCase() : col.groupId,
+        };
+      });
+      columns.push({ headerName: 'Value', field: 'value' });
+      columns.push({ headerName: 'LTD (Base)', field: 'base' });
+
+      const rows = [];
+      for (const item of lineItems) {
+        const data: Record<string, ItemValueType> = {};
+        for (const col of columns) {
+          const key = col.field;
+          if (key) {
+            data[key] = item[key];
+          }
+        }
+        data.value = item.value;
+        data.base = item.base;
+        rows.push(data);
+      }
+
+      return {
+        columns,
+        rows,
+      };
+    }
+
+    // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
+    if (!colGroup.length && rowGroup.length && lineItems.length) {
+      return {
+        columns: [],
+        rows: [],
+      };
+    }
+
+    // 피봇 테이블 o
+    if (colGroup.length && rowGroup.length && lineItems.length) {
+      return getPivotGridData({ lineItems, colGroup, rowGroup });
+    }
+
+    return {
+      columns: [],
+      rows: [],
+    };
+  }, [colGroup, getPivotGridData, lineItemGroups, lineItems, rowGroup]);
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {

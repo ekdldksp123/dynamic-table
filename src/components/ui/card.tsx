@@ -31,7 +31,6 @@ export const GroupCard: FC<GroupCardProps> = ({ id, group, index, onMoveGroup })
         return;
       }
       const dragIndex = (item as DragItem).index;
-      console.log('dragIndex', dragIndex, 'hoverIndex', index);
       const hoverIndex = index;
 
       // Don't replace items with themselves
@@ -59,7 +58,6 @@ export const GroupCard: FC<GroupCardProps> = ({ id, group, index, onMoveGroup })
           return;
         }
       }
-      console.log('move');
       onMoveGroup(dragIndex, hoverIndex);
 
       (item as DragItem).index = hoverIndex;
