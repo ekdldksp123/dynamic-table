@@ -1,4 +1,4 @@
-import { GroupedData, IGridColumn, IGridComplexColumn, IGridHeader, ILineItem, ILineItemGroup } from '@/types';
+import { GridColumnDef, GroupedData, ILineItem, ILineItemGroup } from '@/types';
 import { groupByHierarchical } from '../utils';
 
 interface IGetTableData {
@@ -13,7 +13,7 @@ export const useCreateTable = () => {
       //lineItems 그대로 뿌려준다
       return {
         columns: [],
-        data: [],
+        rows: [],
       };
     }
 
@@ -25,7 +25,7 @@ export const useCreateTable = () => {
     if (!colGroup.length && rowGroup.length && lineItems.length) {
       return {
         columns: [],
-        data: [],
+        rows: [],
       };
     }
 
@@ -39,55 +39,47 @@ export const useCreateTable = () => {
         colGroup.map((group) => group.groupId),
       );
 
-      const { columns, complexColumns } = transformToGridColumns(groupedData);
-      columns.unshift({ header: rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name, name: 'division' });
+      const columns = transformToGridColumnDefs(groupedData);
+      columns.unshift({ headerName: rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name });
 
-      const header: IGridHeader = { height: 50 * colGroup.length, complexColumns };
-      // console.log({ columns, header });
+      // const header: IGridHeader = { height: 50 * colGroup.length, complexColumns };
+      console.log({ columns });
       return {
-        header,
         columns,
-        data: [],
+        rows: [],
       };
     }
 
     return {
       columns: [],
-      data: [],
+      rows: [],
     };
   };
 
-  const transformToGridColumns = (
-    groupedData: GroupedData,
-  ): { columns: IGridColumn[]; complexColumns: IGridComplexColumn[] } => {
-    const columns: IGridColumn[] = [];
-    const complexColumns: IGridComplexColumn[] = [];
+  const transformToGridColumnDefs = (groupedData: GroupedData): GridColumnDef[] => {
+    const columnDefs: GridColumnDef[] = [];
 
-    const traverse = (data: GroupedData | ILineItem[], parentName: string | null) => {
+    const traverse = (data: GroupedData | ILineItem[], parentName: string | null): GridColumnDef[] => {
       if (Array.isArray(data)) {
-        return;
+        return [];
       }
 
-      Object.keys(data).forEach((key) => {
+      return Object.keys(data).map((key) => {
         const childName = parentName ? `${parentName}_${key}` : key;
-        columns.push({ header: key, name: childName });
+        const children = traverse(data[key] as GroupedData, childName);
+        const columnDef: GridColumnDef = {
+          headerName: key,
+          field: children.length ? undefined : childName,
+          children: children.length ? children : undefined,
+        };
 
-        if (parentName) {
-          const existingComplexColumn = complexColumns.find((col) => col.name === parentName);
-          if (existingComplexColumn) {
-            existingComplexColumn.childNames.push(childName);
-          } else {
-            complexColumns.push({ header: parentName, name: parentName, childNames: [childName] });
-          }
-        }
-
-        traverse(data[key] as GroupedData, childName);
+        return columnDef;
       });
     };
 
-    traverse(groupedData, null);
+    columnDefs.push(...traverse(groupedData, null));
 
-    return { columns: columns.filter((v) => !complexColumns.find((c) => v.header === c.header)), complexColumns };
+    return columnDefs;
   };
 
   return { getTableData };

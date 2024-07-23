@@ -4,7 +4,6 @@ import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMem
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ReportProps } from '@/routes/reports/$reportId';
-import Grid from '@toast-ui/react-grid';
 import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { v4 as uuidv4 } from 'uuid';
 import update from 'immutability-helper';
@@ -22,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import 'tui-grid/dist/tui-grid.css';
+import { Grid } from '../ui/grid';
 
 const headers = ['Code', 'Name'];
 
@@ -37,7 +36,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const { getTableData } = useCreateTable();
 
-  const { header, columns } = useMemo(() => {
+  const { columns, rows } = useMemo(() => {
     return getTableData({ lineItems, colGroup, rowGroup });
   }, [colGroup, getTableData, lineItems, rowGroup]);
 
@@ -258,6 +257,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
           </section>
         </section>
         <p className='mt-5 text-lg font-bold'>Preview</p>
+        <Grid columnDefs={columns} rowData={rows} />
       </div>
     </div>
   );
