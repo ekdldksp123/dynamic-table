@@ -3,7 +3,7 @@ export interface ILineItemGroup {
   name: string;
   index: number;
   axis?: Axis;
-  show_totals?: boolean;
+  showTotal: boolean;
 }
 
 export type Axis = 'column' | 'row';
@@ -37,5 +37,10 @@ export interface IReport {
   name: string;
   created_at?: string;
   items: ILineItem[];
+  groups?: ILineItemGroup[];
+  colGroup?: ILineItemGroup[];
+  rowGroup?: ILineItemGroup[];
   contents?: unknown;
+  showRowsTotal?: boolean;
+  showColsTotal?: boolean;
 }

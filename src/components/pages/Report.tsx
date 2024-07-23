@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Grid } from '../ui/grid';
+import { CheckedState } from '@radix-ui/react-checkbox';
+import { CheckboxGroup } from '../ui/checkbox';
 
 const headers = ['Code', 'Name'];
 
@@ -29,10 +31,13 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReport = route.useLoaderData();
 
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
-  const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>([]);
+  const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
-  const [colGroup, setColGroup] = useState<ILineItemGroup[]>([]);
-  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([]);
+  const [colGroup, setColGroup] = useState<ILineItemGroup[]>(report.colGroup ?? []);
+  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>(report.rowGroup ?? []);
+
+  const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
+  const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
   const { getPivotGridData } = useCreateTable();
 
@@ -118,22 +123,56 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [rowGroup],
   );
 
+  const onChangeRowShowTotal = useCallback((index: number, showTotal: CheckedState) => {
+    setRowGroup((prev) => {
+      if (typeof showTotal === 'boolean') {
+        prev[index].showTotal = showTotal;
+        return [...prev];
+      }
+      return prev;
+    });
+  }, []);
+
+  const onChangeColShowTotal = useCallback((index: number, showTotal: CheckedState) => {
+    setColGroup((prev) => {
+      if (typeof showTotal === 'boolean') {
+        prev[index].showTotal = showTotal;
+        return [...prev];
+      }
+      return prev;
+    });
+  }, []);
+
   const renderRow = useCallback(
     (group: ILineItemGroup, index: number) => {
       return (
-        <GroupCard key={`row-${group.groupId}`} id={uuidv4()} group={group} index={index} onMoveGroup={moveRowGroup} />
+        <GroupCard
+          key={`row-${group.groupId}`}
+          id={uuidv4()}
+          group={group}
+          index={index}
+          onMoveGroup={moveRowGroup}
+          onChangeShowTotal={onChangeRowShowTotal}
+        />
       );
     },
-    [moveRowGroup],
+    [moveRowGroup, onChangeRowShowTotal],
   );
 
   const renderColumn = useCallback(
     (group: ILineItemGroup, index: number) => {
       return (
-        <GroupCard key={`col-${group.groupId}`} id={uuidv4()} group={group} index={index} onMoveGroup={moveColGroup} />
+        <GroupCard
+          key={`col-${group.groupId}`}
+          id={uuidv4()}
+          group={group}
+          index={index}
+          onMoveGroup={moveColGroup}
+          onChangeShowTotal={onChangeColShowTotal}
+        />
       );
     },
-    [moveColGroup],
+    [moveColGroup, onChangeColShowTotal],
   );
 
   const deleteGroup = useCallback(() => {
@@ -216,7 +255,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             groupId,
                             name: `Group ${lineItemGroups.length + 1}`,
                             index: lineItemGroups.length,
-                            show_totals: false,
+                            showTotal: false,
                           };
                           setLineItemsGroups((prev) => [...prev, newItem]);
                           setLineItems((prev) =>
@@ -288,18 +327,22 @@ export const Report: FC<ReportProps> = ({ route }) => {
             <p className='mt-5 text-lg font-bold mb-1'>Edit Table Layout</p>
             <div className='grid gap-3'>
               <DraggableCardList
-                title='Column'
-                groups={lineItemGroups}
-                setGroups={setLineItemsGroups}
-                customFields={customFields}
-                children={colGroup.map((col, i) => renderColumn(col, i))}
-              />
-              <DraggableCardList
                 title='Row'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
                 customFields={customFields}
                 children={rowGroup.map((col, i) => renderRow(col, i))}
+                showTotal={showRowsTotal}
+                setShowTotal={setShowRowsTotal}
+              />
+              <DraggableCardList
+                title='Column'
+                groups={lineItemGroups}
+                setGroups={setLineItemsGroups}
+                customFields={customFields}
+                children={colGroup.map((col, i) => renderColumn(col, i))}
+                showTotal={showColsTotal}
+                setShowTotal={setShowColsTotal}
               />
             </div>
           </section>
@@ -317,9 +360,19 @@ interface DraggableCardListProps {
   groups: ILineItemGroup[];
   setGroups: Dispatch<SetStateAction<ILineItemGroup[]>>;
   customFields: ILineItem[];
+  showTotal: CheckedState;
+  setShowTotal: (state: CheckedState) => void;
 }
 
-const DraggableCardList: FC<DraggableCardListProps> = ({ title, children, groups, customFields, setGroups }) => {
+const DraggableCardList: FC<DraggableCardListProps> = ({
+  title,
+  children,
+  groups,
+  customFields,
+  setGroups,
+  showTotal,
+  setShowTotal,
+}) => {
   const [target, setTarget] = useState<string>();
   const onAddHandler = useCallback(() => {
     if (!target) return;
@@ -388,7 +441,16 @@ const DraggableCardList: FC<DraggableCardListProps> = ({ title, children, groups
             <VscDiffAdded className='cursor-pointer' onClick={onAddHandler} />
           </div>
         </div>
-        <div className='flex flex-col gap-3'>{children}</div>
+        <div className='flex flex-col gap-3'>
+          {children}
+          <CheckboxGroup
+            id={title === 'Row' ? 'rowTotal' : 'columnTotal'}
+            label='Show Total'
+            disabled={!children.length}
+            checked={showTotal}
+            onCheckedChange={setShowTotal}
+          />
+        </div>
       </div>
     </DndProvider>
   );
