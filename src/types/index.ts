@@ -1,11 +1,14 @@
+import { GridProps } from '@/components/ui/grid';
+import { ColDef, ColGroupDef } from '@ag-grid-community/core';
+
 export interface ILineItemGroup {
   groupId: string;
   name: string;
   index: number;
   axis?: Axis;
+  total?: number;
   showTotal: boolean;
 }
-
 export type Axis = 'column' | 'row';
 export interface ILineItem {
   code: string;
@@ -13,25 +16,20 @@ export interface ILineItem {
   [key: string]: ItemValueType;
   base: string[];
   isCustom: boolean;
-  value: string | number;
+  value?: string | number;
 }
 
-export type ItemValueType = string | string[] | number | boolean | null;
+export type ItemValueType = string | string[] | number | boolean | null | undefined;
 
 export type GroupedData = {
   [key: string]: GroupedData | ILineItem[];
 };
 
-export type GridColumnDef = {
-  headerName?: string;
-  field?: string;
-  children?: GridColumnDef[];
-};
+export type GridColumnDef = ColDef | ColGroupDef;
 
 export type GridRowData = {
   [key: string]: ItemValueType;
 };
-
 export interface IReport {
   id: number;
   name: string;
@@ -40,7 +38,7 @@ export interface IReport {
   groups?: ILineItemGroup[];
   colGroup?: ILineItemGroup[];
   rowGroup?: ILineItemGroup[];
-  contents?: unknown;
+  gridOptions?: GridProps;
   showRowsTotal?: boolean;
   showColsTotal?: boolean;
 }

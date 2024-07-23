@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ItemValueType, ILineItem, ILineItemGroup, IReport, GridColumnDef } from '@/types';
+import { ItemValueType, ILineItem, ILineItemGroup, IReport } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,11 +21,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Grid } from '../ui/grid';
+import { Grid, GridProps } from '../ui/grid';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { CheckboxGroup } from '../ui/checkbox';
 
 const headers = ['Code', 'Name'];
+
+const INTIAL_GRID_OPTIONS: GridProps = {
+  defaultColDef: {
+    flex: 1, // 각 컬럼이 동일한 비율로 너비를 차지하게 합니다.
+    resizable: true, // 컬럼의 크기 조절을 가능하게 합니다.
+  },
+  columnDefs: [],
+  rowData: [],
+  onGridReady: () => {},
+  grandTotalRow: undefined,
+};
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReport = route.useLoaderData();
@@ -39,59 +50,34 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
-  const { getPivotGridData } = useCreateTable();
+  const { getBasicGridData, getPivotGridData } = useCreateTable();
 
-  const { columns, rows } = useMemo(() => {
+  const gridOptions = useMemo(() => {
+    const gridOptions = { ...INTIAL_GRID_OPTIONS };
     // 행열이 정의 되어있지 않은 경우
     if (!colGroup.length && !rowGroup.length && lineItems.length) {
-      //lineItems 그대로 뿌려준다
-      const columns: GridColumnDef[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
-        return {
-          headerName: typeof col === 'string' ? col : col.name,
-          field: typeof col === 'string' ? col.toLowerCase() : col.groupId,
-        };
-      });
-      columns.push({ headerName: 'Value', field: 'value' });
-      columns.push({ headerName: 'LTD (Base)', field: 'base' });
-
-      const rows = [];
-      for (const item of lineItems) {
-        const data: Record<string, ItemValueType> = {};
-        for (const col of columns) {
-          const key = col.field;
-          if (key) {
-            data[key] = item[key];
-          }
-        }
-        data.value = item.value;
-        data.base = item.base;
-        rows.push(data);
-      }
-
-      return {
-        columns,
-        rows,
-      };
+      const { columns, rows } = getBasicGridData({ headers, lineItems, lineItemGroups });
+      gridOptions.columnDefs = columns;
+      gridOptions.rowData = rows;
     }
 
     // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
     if (!colGroup.length && rowGroup.length && lineItems.length) {
-      return {
-        columns: [],
-        rows: [],
-      };
+      // return {
+      //   columns: [],
+      //   rows: [],
+      // };
     }
 
     // 피봇 테이블 o
     if (colGroup.length && rowGroup.length && lineItems.length) {
-      return getPivotGridData({ lineItems, colGroup, rowGroup });
+      const { columns, rows } = getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
+      gridOptions.columnDefs = columns;
+      gridOptions.rowData = rows;
     }
 
-    return {
-      columns: [],
-      rows: [],
-    };
-  }, [colGroup, getPivotGridData, lineItemGroups, lineItems, rowGroup]);
+    return gridOptions;
+  }, [colGroup, rowGroup, lineItems, lineItemGroups, showRowsTotal, showColsTotal, getBasicGridData, getPivotGridData]);
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -348,7 +334,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
           </section>
         </section>
         <p className='mt-5 text-lg font-bold'>Preview</p>
-        <Grid columnDefs={columns} rowData={rows} />
+        <Grid {...gridOptions} />
       </div>
     </div>
   );
@@ -446,7 +432,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
           <CheckboxGroup
             id={title === 'Row' ? 'rowTotal' : 'columnTotal'}
             label='Show Total'
-            disabled={!children.length}
+            // disabled={!children.length}
             checked={showTotal}
             onCheckedChange={setShowTotal}
           />

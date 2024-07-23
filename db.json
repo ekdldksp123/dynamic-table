@@ -5,7 +5,7 @@
       "name": "주석 10_01",
       "items": [
         {"code": "112130700", "name": "통화스왑_매매",  "base": ["당기말"], "isCustom": false, "value": 1},
-        {"code": "205170700", "name": "통화스왑_매매",  "base": ["당기말"], "isCustom": false, "value": 2} ,
+        {"code": "205170700", "name": "통화스왑_매매",  "base": ["당기말"], "isCustom": false, "value": 2},
         {"code": "112132000", "name": "통화스왑_헷지",  "base": ["당기말"], "isCustom": false, "value": 3},
         {"code": "205172000", "name": "통화스왑_헷지",  "base": ["당기말"], "isCustom": false, "value": 43},
         {"code": "112130500", "name": "통화선도_매매",  "base": ["당기말"], "isCustom": false, "value": 4},
@@ -21,14 +21,7 @@
         {"code": "112131400", "name": "이자율선도_헷지",  "base": ["당기말"], "isCustom": false, "value": 21},
         {"code": "205171400", "name": "이자율선도_헷지",  "base": ["당기말"], "isCustom": false, "value": 213}
       ],
-      "contents": {
-        "header": {
-          "height": 50,
-          "complexColumns": []
-        },
-        "columns": [],
-        "rows": []
-      }
+      "contents": {}
     }
   ]
 }
