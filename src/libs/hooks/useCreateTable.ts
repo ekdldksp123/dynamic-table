@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { GridRowData, GroupedData, ILineItem, ILineItemGroup, ItemValueType, Subtotals } from '@/types';
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, GroupColumnDef, createColumnHelper } from '@tanstack/react-table';
+import { areStringArraysEqual } from '../utils';
+import { groupedDataWithNoDuplicatedName } from '../../__tests__/unit.test';
 
 interface IGetPivotGridData {
   lineItems: ILineItem[];
@@ -18,20 +20,15 @@ interface IGetBasicGridData {
 }
 
 type GridColumnsData = {
-  columns: ColumnDef<GridRowData>[];
+  columns: unknown[];
   fieldValuesMap: Record<string, ILineItem[]>;
   total: number;
-};
-
-type ItemsWithTotal = { total: number; items: ILineItem[] };
-
-type GroupedDataWithTotal = {
-  [key: string]: GroupedDataWithTotal | ItemsWithTotal;
 };
 
 export const useCreateTable = () => {
   const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
+
     const columns: ColumnDef<GridRowData>[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
       const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
 
@@ -81,14 +78,60 @@ export const useCreateTable = () => {
     );
     // console.log({ groupedColumnData });
 
-    const subtotals = calculateSubtotals(groupedColumnData);
-    console.log({ subtotals });
+    //열 그룹 소계 표시 여부 확인 및 계산 로직
+    const showSubtotalGroups = colGroup.filter((group) => group.showTotal === true);
+    if (showSubtotalGroups.length) {
+      // const subtotals = calculateSubtotals(groupedColumnData);
+      const subtotals = calculateSubtotals(groupedDataWithNoDuplicatedName);
+      console.log({ subtotals });
+      const minGroupLevel = Math.min(...showSubtotalGroups.map((g) => g.level));
+      const minGroup = showSubtotalGroups.find((group) => group.level === minGroupLevel);
+
+      if (minGroup) {
+        const { groupValues } = getGroupValuesAndCodes(lineItems, minGroup.groupId);
+        // console.log({ subtotals, groupValues });
+
+        const subtotalKeys = Object.keys(subtotals);
+        if (areStringArraysEqual(subtotalKeys, groupValues as string[])) {
+          console.log('equal', { subtotals });
+        }
+      }
+    }
 
     const { columns, fieldValuesMap, total } = transformToGridColumnsData(groupedColumnData);
 
     const fields = Object.keys(fieldValuesMap);
     const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
-    columns.unshift({ accessorKey: 'division', header: firstRowName });
+    //TODO header rowSpan...
+    // const columnHelper = createColumnHelper<GridRowData>();
+
+    // const firstColumn = colGroup.length
+    //   ? columnHelper.group({
+    //       id: 'division',
+    //       header: firstRowName,
+    //       columns: [
+    //         columnHelper.accessor('division', {
+    //           header: undefined,
+    //         }),
+    //       ],
+    //       meta: {
+    //         rowSpan: colGroup.length,
+    //       },
+    //     })
+    //   : columnHelper.accessor('division', {
+    //       id: 'division',
+    //       header: firstRowName,
+    //     });
+
+    columns.unshift({
+      id: 'division',
+      accessorKey: 'division',
+      header: firstRowName,
+      meta: {
+        rowSpan: colGroup.length,
+      },
+    });
+    // columns.unshift(firstColumn);
 
     if (showColsTotal) {
       columns.push({ header: 'Total', accessorKey: 'total' });
@@ -196,11 +239,12 @@ export const useCreateTable = () => {
 
   // 그룹핑된 데이터로 테이블 컬럼, 값 필드, 그룹에 해당하는 값 배열 추출하기
   const transformToGridColumnsData = (groupedData: GroupedData): GridColumnsData => {
-    const columnDefs: ColumnDef<GridRowData>[] = [];
+    const columnHelper = createColumnHelper<GridRowData>();
+    const columnDefs: unknown[] = [];
     const fieldValuesMap: Record<string, ILineItem[]> = {};
     let total = 0;
 
-    const traverse = (data: GroupedData | ILineItem[], parentName: string | null): ColumnDef<GridRowData>[] => {
+    const traverse = (data: GroupedData | ILineItem[], parentName: string | null): unknown[] => {
       if (Array.isArray(data)) {
         if (parentName) {
           fieldValuesMap[parentName] = [...data];
@@ -215,11 +259,19 @@ export const useCreateTable = () => {
       return Object.keys(data).map((key) => {
         const childName = parentName ? `${parentName}_${key}` : key;
         const children = traverse(data[key], childName);
-        const columnDef: ColumnDef<GridRowData> = {
-          header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
-          accessorKey: parentName ? childName : undefined,
-          columns: children.length ? children : undefined,
-        };
+        // const columnDef = {
+        //   header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+        //   accessorKey: parentName ? childName : undefined,
+        //   columns: children.length ? children : undefined,
+        // };
+        const columnDef = children.length
+          ? columnHelper.group({
+              header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+              columns: children as ColumnDef<GridRowData, unknown>[],
+            })
+          : columnHelper.accessor(childName, {
+              header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+            });
 
         return columnDef;
       });
@@ -229,32 +281,6 @@ export const useCreateTable = () => {
 
     return { columns: columnDefs, fieldValuesMap, total };
   };
-
-  // const calculateTotals = (groupedData: GroupedData): GroupedDataWithTotal => {
-  //   const recur = (data: GroupedData | ILineItem[]): GroupedDataWithTotal | ItemsWithTotal => {
-  //     if (Array.isArray(data)) {
-  //       const total = data.reduce((sum, item) => sum + Number(item.value), 0);
-  //       return { total, items: data };
-  //     }
-
-  //     const result: GroupedDataWithTotal = {};
-  //     for (const key in data) {
-  //       result[key] = recur(data[key] as GroupedData | ILineItem[]);
-  //     }
-
-  //     const total = Object.values(result).reduce((sum, group) => {
-  //       if ('total' in group) {
-  //         return sum + Number(group.total);
-  //       }
-  //       return sum;
-  //     }, 0);
-
-  //     (result as unknown as ItemsWithTotal).total = total;
-  //     return result;
-  //   };
-
-  //   return recur(groupedData) as GroupedDataWithTotal;
-  // };
 
   const calculateSubtotals = (data: GroupedData): Subtotals => {
     const result: { [key: string]: { [name: string]: number } } = {};
@@ -268,10 +294,14 @@ export const useCreateTable = () => {
 
     for (const purpose in data) {
       const purposeData = data[purpose];
-      if (typeof purposeData !== 'object' || Array.isArray(purposeData)) continue;
+
+      if (typeof purposeData !== 'object' || Array.isArray(purposeData)) {
+        continue;
+      }
 
       for (const assetType in purposeData) {
         const items = purposeData[assetType] as ILineItem[];
+
         if (!result[assetType]) {
           result[assetType] = {};
         }
@@ -293,5 +323,5 @@ export const useCreateTable = () => {
     return subtotals;
   };
 
-  return { getBasicGridData, getPivotGridData };
+  return { getBasicGridData, getPivotGridData, calculateSubtotals };
 };

@@ -1,4 +1,4 @@
-import { GridRowData, ILineItem, ItemValueType } from '@/types';
+import { GridRowData } from '@/types';
 import { FC, useState } from 'react';
 import {
   GroupingState,
@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-table';
 
 interface DataGridProps {
-  columns: ColumnDef<GridRowData>[];
+  columns: ColumnDef<GridRowData, unknown>[];
   data: GridRowData[];
 }
 
@@ -40,11 +40,22 @@ export const DataGrid: FC<DataGridProps> = ({ data, columns }) => {
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
+              //TODO header rowSpan...
+              //   const rowSpan = header.column.columnDef.meta?.rowSpan;
+
+              //   if (header.id === 'division' && header.depth !== 1) {
+              //     return null;
+              //   }
+
+              //   if (!header.isPlaceholder && rowSpan !== undefined && header.id === header.column.id) {
+              //     return null;
+              //   }
               return (
                 <th
                   className='px-4 py-2 border-r border-b font-medium border-white'
                   key={header.id}
                   colSpan={header.colSpan}
+                  //   rowSpan={rowSpan}
                 >
                   {header.isPlaceholder ? null : (
                     <div>

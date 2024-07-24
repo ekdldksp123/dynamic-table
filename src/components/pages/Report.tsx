@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ItemValueType, ILineItem, ILineItemGroup, IReport } from '@/types';
+import { ItemValueType, ILineItem, ILineItemGroup, IReport, GridRowData } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import {
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { CheckboxGroup } from '../ui/checkbox';
 import { DataGrid } from '../ui/tanstack-grid';
+import { ColumnDef } from '@tanstack/react-table';
 
 const headers = ['Code', 'Name'];
 
@@ -338,7 +339,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
           </section>
         </section>
         <p className='mt-5 text-lg font-bold'>Preview</p>
-        <DataGrid columns={columns} data={rows} />
+        <DataGrid columns={columns as ColumnDef<GridRowData, unknown>[]} data={rows} />
       </div>
     </div>
   );
