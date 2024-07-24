@@ -3,7 +3,7 @@ import { ColDef, ColGroupDef } from '@ag-grid-community/core';
 export interface ILineItemGroup {
   groupId: string;
   name: string;
-  index: number;
+  level: number;
   axis?: Axis;
   total?: number;
   showTotal: boolean;

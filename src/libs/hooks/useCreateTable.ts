@@ -58,7 +58,7 @@ export const useCreateTable = () => {
       data.base = item.base;
       rows.push(data);
     }
-    console.log({ columns, rows });
+    // console.log({ columns, rows });
 
     return {
       columns,
@@ -79,7 +79,7 @@ export const useCreateTable = () => {
       lineItems,
       rowGroup.map(({ groupId }) => groupId),
     );
-    console.log({ groupedColumnData });
+    // console.log({ groupedColumnData });
 
     const subtotals = calculateSubtotals(groupedColumnData);
     console.log({ subtotals });
@@ -136,7 +136,7 @@ export const useCreateTable = () => {
       rows.push(row);
     }
 
-    console.log({ columns, rows });
+    // console.log({ columns, rows });
     return {
       columns,
       rows,

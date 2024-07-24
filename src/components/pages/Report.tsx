@@ -42,12 +42,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const { getBasicGridData, getPivotGridData } = useCreateTable();
 
   const { columns, rows } = useMemo(() => {
-    // const gridOptions = { ...INTIAL_GRID_OPTIONS };
     // 행열이 정의 되어있지 않은 경우
     if (!colGroup.length && !rowGroup.length && lineItems.length) {
       return getBasicGridData({ headers, lineItems, lineItemGroups });
-      // gridOptions.columnDefs = columns;
-      // gridOptions.rowData = rows;
     }
 
     // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
@@ -61,8 +58,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
     // 피봇 테이블 o
     if (colGroup.length && rowGroup.length && lineItems.length) {
       return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
-      // gridOptions.columnDefs = columns;
-      // gridOptions.rowData = rows;
     }
     return {
       columns: [],
@@ -100,25 +95,43 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [rowGroup],
   );
 
-  const onChangeRowShowTotal = useCallback((index: number, showTotal: CheckedState) => {
-    setRowGroup((prev) => {
-      if (typeof showTotal === 'boolean') {
-        prev[index].showTotal = showTotal;
-        return [...prev];
-      }
-      return prev;
-    });
-  }, []);
+  const onChangeRowShowTotal = useCallback(
+    (index: number, showTotal: CheckedState) => {
+      setRowGroup((prev) => {
+        if (typeof showTotal === 'boolean') {
+          prev[index].showTotal = showTotal;
+          return [...prev];
+        }
+        return prev;
+      });
 
-  const onChangeColShowTotal = useCallback((index: number, showTotal: CheckedState) => {
-    setColGroup((prev) => {
-      if (typeof showTotal === 'boolean') {
-        prev[index].showTotal = showTotal;
-        return [...prev];
+      const groupLevel = rowGroup[index].level;
+      const maxGroupLevel = Math.max(...rowGroup.map((g) => g.level));
+      if (groupLevel === maxGroupLevel) {
+        setShowRowsTotal(showTotal);
       }
-      return prev;
-    });
-  }, []);
+    },
+    [rowGroup],
+  );
+
+  const onChangeColShowTotal = useCallback(
+    (index: number, showTotal: CheckedState) => {
+      setColGroup((prev) => {
+        if (typeof showTotal === 'boolean') {
+          prev[index].showTotal = showTotal;
+          return [...prev];
+        }
+        return prev;
+      });
+
+      const groupLevel = colGroup[index].level;
+      const maxGroupLevel = Math.max(...colGroup.map((g) => g.level));
+      if (groupLevel === maxGroupLevel) {
+        setShowColsTotal(showTotal);
+      }
+    },
+    [colGroup],
+  );
 
   const renderRow = useCallback(
     (group: ILineItemGroup, index: number) => {
@@ -231,7 +244,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                           const newItem: ILineItemGroup = {
                             groupId,
                             name: `Group ${lineItemGroups.length + 1}`,
-                            index: lineItemGroups.length,
+                            level: lineItemGroups.length + 1,
                             showTotal: false,
                           };
                           setLineItemsGroups((prev) => [...prev, newItem]);
