@@ -21,22 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Grid, GridProps } from '../ui/grid';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { CheckboxGroup } from '../ui/checkbox';
+import { DataGrid } from '../ui/tanstack-grid';
 
 const headers = ['Code', 'Name'];
-
-const INTIAL_GRID_OPTIONS: GridProps = {
-  defaultColDef: {
-    flex: 1, // 각 컬럼이 동일한 비율로 너비를 차지하게 합니다.
-    resizable: true, // 컬럼의 크기 조절을 가능하게 합니다.
-  },
-  columnDefs: [],
-  rowData: [],
-  onGridReady: () => {},
-  grandTotalRow: undefined,
-};
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReport = route.useLoaderData();
@@ -52,31 +41,33 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const { getBasicGridData, getPivotGridData } = useCreateTable();
 
-  const gridOptions = useMemo(() => {
-    const gridOptions = { ...INTIAL_GRID_OPTIONS };
+  const { columns, rows } = useMemo(() => {
+    // const gridOptions = { ...INTIAL_GRID_OPTIONS };
     // 행열이 정의 되어있지 않은 경우
     if (!colGroup.length && !rowGroup.length && lineItems.length) {
-      const { columns, rows } = getBasicGridData({ headers, lineItems, lineItemGroups });
-      gridOptions.columnDefs = columns;
-      gridOptions.rowData = rows;
+      return getBasicGridData({ headers, lineItems, lineItemGroups });
+      // gridOptions.columnDefs = columns;
+      // gridOptions.rowData = rows;
     }
 
     // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
     if (!colGroup.length && rowGroup.length && lineItems.length) {
-      // return {
-      //   columns: [],
-      //   rows: [],
-      // };
+      return {
+        columns: [],
+        rows: [],
+      };
     }
 
     // 피봇 테이블 o
     if (colGroup.length && rowGroup.length && lineItems.length) {
-      const { columns, rows } = getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
-      gridOptions.columnDefs = columns;
-      gridOptions.rowData = rows;
+      return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
+      // gridOptions.columnDefs = columns;
+      // gridOptions.rowData = rows;
     }
-
-    return gridOptions;
+    return {
+      columns: [],
+      rows: [],
+    };
   }, [colGroup, rowGroup, lineItems, lineItemGroups, showRowsTotal, showColsTotal, getBasicGridData, getPivotGridData]);
 
   const moveColGroup = useCallback(
@@ -334,7 +325,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
           </section>
         </section>
         <p className='mt-5 text-lg font-bold'>Preview</p>
-        <Grid {...gridOptions} />
+        <DataGrid columns={columns} data={rows} />
       </div>
     </div>
   );

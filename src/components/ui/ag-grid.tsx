@@ -9,6 +9,17 @@ import '@ag-grid-community/styles/ag-theme-quartz.css';
 
 export type GridProps = ComponentProps<typeof AgGridReact>;
 
+export const INTIAL_GRID_OPTIONS: GridProps = {
+  defaultColDef: {
+    flex: 1, // 각 컬럼이 동일한 비율로 너비를 차지하게 합니다.
+    resizable: true, // 컬럼의 크기 조절을 가능하게 합니다.
+  },
+  columnDefs: [],
+  rowData: [],
+  onGridReady: () => {},
+  grandTotalRow: undefined,
+};
+
 export const Grid: FC<GridProps> = ({ ...props }) => {
   return (
     <div className='w-[100%] h-[500px]'>

@@ -1,4 +1,3 @@
-import { GridProps } from '@/components/ui/grid';
 import { ColDef, ColGroupDef } from '@ag-grid-community/core';
 
 export interface ILineItemGroup {
@@ -19,15 +18,22 @@ export interface ILineItem {
   value?: string | number;
 }
 
-export type ItemValueType = string | string[] | number | boolean | null | undefined;
-
 export type GroupedData = {
   [key: string]: GroupedData | ILineItem[];
 };
 
+export type Subtotals = {
+  [key: string]: Subtotals | Subtotal[];
+};
+
+export type Subtotal = { subtotal: number };
+
+export type ItemValueType = string | string[] | number | boolean | null | undefined;
+
 export type GridColumnDef = ColDef | ColGroupDef;
 
 export type GridRowData = {
+  division?: ItemValueType;
   [key: string]: ItemValueType;
 };
 export interface IReport {
@@ -38,7 +44,7 @@ export interface IReport {
   groups?: ILineItemGroup[];
   colGroup?: ILineItemGroup[];
   rowGroup?: ILineItemGroup[];
-  gridOptions?: GridProps;
+  gridOptions?: unknown;
   showRowsTotal?: boolean;
   showColsTotal?: boolean;
 }
