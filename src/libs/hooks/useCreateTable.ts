@@ -1,9 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { GridRowData, GroupedData, ILineItem, ILineItemGroup, ItemValueType, Subtotal, Subtotals } from '@/types';
+import {
+  GridRowData,
+  GroupedData,
+  ILineItem,
+  ILineItemGroup,
+  ItemValueType,
+  KeyTypeFromItemValue,
+  Subtotal,
+  Subtotals,
+} from '@/types';
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { ColumnDef, GroupColumnDef, createColumnHelper } from '@tanstack/react-table';
+import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { areStringArraysEqual } from '../utils';
-import { groupedDataWithNoDuplicatedName } from '../../__tests__/unit.test';
 
 interface IGetPivotGridData {
   lineItems: ILineItem[];
@@ -36,10 +44,11 @@ export const useCreateTable = () => {
         header: typeof col === 'string' ? col : col.name,
         accessorKey: key,
         id: key, // Use `id` to identify the column
+        cell: (row) => row.getValue() || '-',
       };
     });
-    columns.push({ header: 'Value', accessorKey: 'value' });
-    columns.push({ header: 'LTD (Base)', accessorKey: 'base' });
+    // columns.push({ header: 'Value', accessorKey: 'value', cell: (row) => row.getValue() || '-' });
+    // columns.push({ header: 'LTD (Base)', accessorKey: 'base' });
 
     const rows = [];
     for (const item of lineItems) {
@@ -162,7 +171,7 @@ export const useCreateTable = () => {
     // console.log({ groupValues, lineItemCodesMap });
 
     const rows: GridRowData[] = Array.from({ length: groupValues.length }, (_, i) => {
-      const mapKey = groupValues[i] as unknown as Exclude<ItemValueType, string[] | boolean | null | undefined>;
+      const mapKey = groupValues[i] as unknown as KeyTypeFromItemValue;
       const codes = lineItemCodesMap[mapKey];
       const row: GridRowData = { division: groupValues[i] };
 
@@ -171,7 +180,7 @@ export const useCreateTable = () => {
         if (typeof field === 'string' && fieldValue) {
           row[field] = fieldValue.value;
         } else if (field === 'total') {
-          const totalKey = groupValues[i] as unknown as Exclude<ItemValueType, string[] | boolean | null | undefined>;
+          const totalKey = groupValues[i] as unknown as KeyTypeFromItemValue;
           row[field] = (groupedRowData[totalKey] as ILineItem[]).reduce(
             (sum, item) => sum + Number(item.value ?? 0),
             0,
@@ -223,7 +232,7 @@ export const useCreateTable = () => {
     const lineItemCodesMap: Record<string, ItemValueType[]> = {};
 
     for (const item of lineItems) {
-      const itemValue = item[groupId] as unknown as Exclude<ItemValueType, boolean | string[] | null | undefined>;
+      const itemValue = item[groupId] as unknown as KeyTypeFromItemValue;
 
       if (!groupValues.includes(itemValue)) {
         groupValues.push(itemValue);
@@ -243,7 +252,7 @@ export const useCreateTable = () => {
       }
       const [currentKey, ...nextKeys] = remainingKeys;
       return items.reduce((result, item) => {
-        const groupKey = item[currentKey] as unknown as Exclude<ItemValueType, boolean | string[] | null | undefined>;
+        const groupKey = item[currentKey] as unknown as KeyTypeFromItemValue;
         if (!result[groupKey]) {
           result[groupKey] = [];
         }
@@ -298,6 +307,7 @@ export const useCreateTable = () => {
           : columnHelper.accessor(childName, {
               header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
               aggregationFn: 'sum', //TODO 이거 어떻게 쓰는지?
+              cell: (row) => row.getValue() || '-',
             });
 
         return columnDef;

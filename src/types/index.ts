@@ -15,7 +15,13 @@ export interface ILineItem {
   [key: string]: ItemValueType;
   base: string[];
   isCustom: boolean;
-  value?: string | number;
+  value?: number; //LTD (Base) - 당기, 당기말
+}
+
+export type LineItemKey = keyof ILineItem;
+
+export interface ILineItemColumnDisplayOrNot {
+  [key: LineItemKey]: boolean | undefined;
 }
 
 export type GroupedData = {
@@ -30,6 +36,8 @@ export type Subtotal = { subtotal: number };
 
 export type ItemValueType = string | string[] | number | boolean | null | undefined;
 
+export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | null | undefined>;
+
 export type GridColumnDef = ColDef | ColGroupDef;
 
 export type GridRowData = {
@@ -41,6 +49,7 @@ export interface IReport {
   name: string;
   created_at?: string;
   items: ILineItem[];
+  itemsDisplayInfo: ILineItemColumnDisplayOrNot;
   groups?: ILineItemGroup[];
   colGroup?: ILineItemGroup[];
   rowGroup?: ILineItemGroup[];

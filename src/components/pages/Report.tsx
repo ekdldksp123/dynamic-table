@@ -26,7 +26,8 @@ import { CheckboxGroup } from '../ui/checkbox';
 import { DataGrid } from '../ui/tanstack-grid';
 import { ColumnDef } from '@tanstack/react-table';
 
-const headers = ['Code', 'Name'];
+const HEADERS_TO_EXCLLUDE = ['전기', '전기말'];
+const field_headers = ['Code', 'Name'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReport = route.useLoaderData();
@@ -41,6 +42,14 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
   const { getBasicGridData, getPivotGridData } = useCreateTable();
+  const headers = useMemo(
+    () =>
+      Object.keys(report.itemsDisplayInfo)
+        .filter((key) => report.itemsDisplayInfo[key] === true && !HEADERS_TO_EXCLLUDE.includes(key))
+        .map((key) => `${key.charAt(0).toUpperCase()}${key.slice(1)}`),
+
+    [report.itemsDisplayInfo],
+  );
 
   const { columns, rows } = useMemo(() => {
     // 행열이 정의 되어있지 않은 경우
@@ -64,7 +73,17 @@ export const Report: FC<ReportProps> = ({ route }) => {
       columns: [],
       rows: [],
     };
-  }, [colGroup, rowGroup, lineItems, lineItemGroups, showRowsTotal, showColsTotal, getBasicGridData, getPivotGridData]);
+  }, [
+    colGroup,
+    rowGroup,
+    lineItems,
+    getBasicGridData,
+    headers,
+    lineItemGroups,
+    getPivotGridData,
+    showColsTotal,
+    showRowsTotal,
+  ]);
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -166,6 +185,45 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [moveColGroup, onChangeColShowTotal],
   );
 
+  const onAddGroup = useCallback(() => {
+    const groupId = uuidv4();
+    const newItem: ILineItemGroup = {
+      groupId,
+      name: `Group ${lineItemGroups.length + 1}`,
+      level: lineItemGroups.length + 1,
+      showTotal: false,
+    };
+    setLineItemsGroups((prev) => [...prev, newItem]);
+
+    switch (report.name) {
+      case '주석 10_01':
+        setLineItems((prev) =>
+          prev.map((item, i) => {
+            item[groupId] =
+              lineItemGroups.length === 0
+                ? item.name.split('_')[0]
+                : lineItemGroups.length === 1
+                  ? item.name === prev[i - 1]?.name
+                    ? '부채'
+                    : '자산'
+                  : item.name.split('_')[1] === '매매'
+                    ? '매매목적'
+                    : '위험회피목적';
+            return item;
+          }),
+        );
+        break;
+      default:
+        setLineItems((prev) =>
+          prev.map((item) => {
+            item[groupId] = null;
+            return item;
+          }),
+        );
+        break;
+    }
+  }, [lineItemGroups.length, report.name]);
+
   const deleteGroup = useCallback(() => {
     const lastKey = lineItemGroups[lineItemGroups.length - 1].groupId;
     setLineItemsGroups((prev) => {
@@ -211,7 +269,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
               <table className='whitespace-nowrap'>
                 <thead>
                   <tr>
-                    {headers.map((header) => (
+                    {field_headers.map((header) => (
                       <th key={header} className='bg-gray-200 h-[30px]'>
                         {header}
                       </th>
@@ -239,35 +297,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                       </th>
                     ))}
                     <th key='add-group-btn' className='bg-gray-200 h-[30px]'>
-                      <Button
-                        onClick={() => {
-                          const groupId = uuidv4();
-                          const newItem: ILineItemGroup = {
-                            groupId,
-                            name: `Group ${lineItemGroups.length + 1}`,
-                            level: lineItemGroups.length + 1,
-                            showTotal: false,
-                          };
-                          setLineItemsGroups((prev) => [...prev, newItem]);
-                          setLineItems((prev) =>
-                            prev.map((item, i) => {
-                              item[groupId] =
-                                lineItemGroups.length === 0
-                                  ? item.name.split('_')[0]
-                                  : lineItemGroups.length === 1
-                                    ? item.name === prev[i - 1]?.name
-                                      ? '부채'
-                                      : '자산'
-                                    : item.name.split('_')[1] === '매매'
-                                      ? '매매목적'
-                                      : '위험회피목적';
-                              return item;
-                            }),
-                          );
-                        }}
-                      >
-                        Add Group
-                      </Button>
+                      <Button onClick={onAddGroup}>Add Group</Button>
                     </th>
                     <th key='LTD(Base)' className='bg-gray-200 h-[30px]'>
                       LTD (Base)
