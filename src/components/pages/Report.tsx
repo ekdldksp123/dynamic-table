@@ -204,7 +204,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
       <div className='p-5 bg-white'>
         <p className='font-bold text-lg'>Report Name</p>
         <h2>{report?.name}</h2>
-        <section className='flex w-[100%]'>
+        <section className='flex gap-3 w-[100%] h-[550px] overflow-y-auto'>
           <section className='w-[70%] overflow-x-auto'>
             <p className='mt-5 text-lg font-bold mb-1'>Field List</p>
             <div className='overflow-x-auto'>

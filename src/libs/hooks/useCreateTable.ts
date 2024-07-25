@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { GridRowData, GroupedData, ILineItem, ILineItemGroup, ItemValueType, Subtotals } from '@/types';
+import { GridRowData, GroupedData, ILineItem, ILineItemGroup, ItemValueType, Subtotal, Subtotals } from '@/types';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { ColumnDef, GroupColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { areStringArraysEqual } from '../utils';
@@ -36,7 +36,6 @@ export const useCreateTable = () => {
         header: typeof col === 'string' ? col : col.name,
         accessorKey: key,
         id: key, // Use `id` to identify the column
-        accessorFn: (row) => row[key],
       };
     });
     columns.push({ header: 'Value', accessorKey: 'value' });
@@ -66,6 +65,7 @@ export const useCreateTable = () => {
   const getPivotGridData = ({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal }: IGetPivotGridData) => {
     // console.log({ colGroup, rowGroup });
     // 행과 열 그룹별로 컬럼과 행을 구성
+    const columnHelper = createColumnHelper<GridRowData>();
 
     const groupedColumnData: GroupedData = groupByHierarchical(
       lineItems,
@@ -78,33 +78,51 @@ export const useCreateTable = () => {
     );
     // console.log({ groupedColumnData });
 
+    const { columns, fieldValuesMap, total } = transformToGridColumnsData(groupedColumnData);
+    const fields = Object.keys(fieldValuesMap);
+
     //열 그룹 소계 표시 여부 확인 및 계산 로직
     const showSubtotalGroups = colGroup.filter((group) => group.showTotal === true);
+    const subtotals = calculateSubtotals(groupedColumnData);
+
     if (showSubtotalGroups.length) {
-      // const subtotals = calculateSubtotals(groupedColumnData);
-      const subtotals = calculateSubtotals(groupedDataWithNoDuplicatedName);
-      console.log({ subtotals });
-      const minGroupLevel = Math.min(...showSubtotalGroups.map((g) => g.level));
-      const minGroup = showSubtotalGroups.find((group) => group.level === minGroupLevel);
+      const hasDuplicateKeys = checkSubgroupKeys(groupedColumnData);
 
-      if (minGroup) {
-        const { groupValues } = getGroupValuesAndCodes(lineItems, minGroup.groupId);
-        // console.log({ subtotals, groupValues });
+      if (hasDuplicateKeys) {
+        // 하위 필드가 서로 중복되면
 
-        const subtotalKeys = Object.keys(subtotals);
-        if (areStringArraysEqual(subtotalKeys, groupValues as string[])) {
-          console.log('equal', { subtotals });
+        const minGroupLevel = Math.min(...showSubtotalGroups.map((g) => g.level));
+        const minGroup = showSubtotalGroups.find((group) => group.level === minGroupLevel);
+
+        if (minGroup) {
+          const { groupValues } = getGroupValuesAndCodes(lineItems, minGroup.groupId);
+          // console.log({ subtotals, groupValues });
+
+          const subtotalKeys = Object.keys(subtotals);
+          if (areStringArraysEqual(subtotalKeys, groupValues as string[])) {
+            columns.push(
+              columnHelper.group({
+                id: 'subtotal',
+                header: '합계',
+                columns: subtotalKeys.map((key) => {
+                  const accessorKey = `${key}_subtotal`;
+                  fields.push(accessorKey);
+                  return columnHelper.accessor(accessorKey, {
+                    header: key,
+                    aggregationFn: 'sum', //TODO 이거 어떻게 쓰는지?
+                  });
+                }),
+              }),
+            );
+          }
         }
+      } else {
+        //TODO 중복안되면 그룹내 합계 처리
       }
     }
 
-    const { columns, fieldValuesMap, total } = transformToGridColumnsData(groupedColumnData);
-
-    const fields = Object.keys(fieldValuesMap);
     const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
     //TODO header rowSpan...
-    // const columnHelper = createColumnHelper<GridRowData>();
-
     // const firstColumn = colGroup.length
     //   ? columnHelper.group({
     //       id: 'division',
@@ -131,10 +149,9 @@ export const useCreateTable = () => {
         rowSpan: colGroup.length,
       },
     });
-    // columns.unshift(firstColumn);
 
     if (showColsTotal) {
-      columns.push({ header: 'Total', accessorKey: 'total' });
+      columns.push({ header: '총계', accessorKey: 'total' });
       fields.push('total');
     }
 
@@ -159,6 +176,13 @@ export const useCreateTable = () => {
             (sum, item) => sum + Number(item.value ?? 0),
             0,
           );
+        } else if (field.includes('subtotal')) {
+          for (const subtotal in subtotals) {
+            const key = field.split('_')[0];
+            if (key === subtotal) {
+              row[field] = (subtotals[subtotal] as Subtotal[])[i].subtotal;
+            }
+          }
         }
       }
 
@@ -166,12 +190,19 @@ export const useCreateTable = () => {
     });
 
     if (showRowsTotal) {
-      const row: GridRowData = { division: 'Total' };
+      const row: GridRowData = { division: '총계' };
       for (const field of fields) {
         const items = fieldValuesMap[field];
         if (items) {
           const sum = fieldValuesMap[field].reduce((sum, item) => sum + Number(item.value ?? 0), 0);
           row[field] = sum;
+        } else if (field.includes('subtotal')) {
+          for (const subtotal in subtotals) {
+            const key = field.split('_')[0];
+            if (key === subtotal) {
+              row[field] = (subtotals[subtotal] as Subtotal[]).reduce((sum, v) => sum + v.subtotal, 0);
+            }
+          }
         } else {
           row.total = total;
         }
@@ -259,11 +290,6 @@ export const useCreateTable = () => {
       return Object.keys(data).map((key) => {
         const childName = parentName ? `${parentName}_${key}` : key;
         const children = traverse(data[key], childName);
-        // const columnDef = {
-        //   header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
-        //   accessorKey: parentName ? childName : undefined,
-        //   columns: children.length ? children : undefined,
-        // };
         const columnDef = children.length
           ? columnHelper.group({
               header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
@@ -271,6 +297,7 @@ export const useCreateTable = () => {
             })
           : columnHelper.accessor(childName, {
               header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+              aggregationFn: 'sum', //TODO 이거 어떻게 쓰는지?
             });
 
         return columnDef;
@@ -321,6 +348,44 @@ export const useCreateTable = () => {
     }
 
     return subtotals;
+  };
+
+  // 함수를 정의하여 하위 그룹의 키 중복 여부 확인
+  const checkSubgroupKeys = (groupedData: GroupedData): boolean => {
+    const keysSet: Set<string> = new Set();
+
+    function traverse(data: GroupedData | ILineItem[]): boolean {
+      if (Array.isArray(data)) {
+        // 배열은 중복 검사의 대상이 아니므로 false 반환
+        return false;
+      } else {
+        let hasDuplicateKeys = false;
+
+        for (const key in data) {
+          if (Object.prototype.hasOwnProperty.call(data, key)) {
+            if (keysSet.has(key)) {
+              hasDuplicateKeys = true;
+              break;
+            }
+            keysSet.add(key);
+
+            const value = data[key];
+            // 배열이 아닌 경우에만 재귀적으로 탐색
+            if (typeof value === 'object' && !Array.isArray(value)) {
+              hasDuplicateKeys = traverse(value);
+            }
+
+            if (hasDuplicateKeys) {
+              break;
+            }
+          }
+        }
+
+        return hasDuplicateKeys;
+      }
+    }
+
+    return traverse(groupedData);
   };
 
   return { getBasicGridData, getPivotGridData, calculateSubtotals };
