@@ -6,14 +6,27 @@ export const Route = createFileRoute('/reports/$reportId/')({
     const reportId = Number(params.reportId);
     const res = await fetch(`http://localhost:3000/reports?id=${reportId}`);
     const reportConfig = await res.json();
-    //TODO 이렇게 픽스해서 가져올건지?
-    reportConfig[0].itemsDisplayInfo = {
-      code: false,
-      name: false,
-      base: false,
-      value: true,
-      isCustom: false,
-    };
+
+    const itemsKey = reportConfig[0].items.length ? Object.keys(reportConfig[0].items[0]) : [];
+    //FIXME
+    reportConfig[0].itemsDisplayInfo = itemsKey.reduce((acc, cur) => {
+      let display = true;
+      switch (cur) {
+        case 'code':
+        case 'name':
+        case 'base':
+        case 'isCustom':
+          display = false;
+          break;
+        case 'value':
+          display = true;
+          break;
+        default:
+          display = true;
+          break;
+      }
+      return { ...acc, [cur]: display };
+    }, {});
     return reportConfig[0];
   },
   component: () => <Report route={Route} />,

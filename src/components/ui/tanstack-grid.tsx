@@ -88,9 +88,9 @@ export const DataGrid: FC<DataGridProps> = ({ data, columns }) => {
               {row.getVisibleCells().map((cell) => {
                 return (
                   <td
+                    key={cell.id}
                     className='px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white text-center'
                     {...{
-                      key: cell.id,
                       style: {
                         background: cell.getIsGrouped()
                           ? '#0aff0082'

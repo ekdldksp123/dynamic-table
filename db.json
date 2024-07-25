@@ -26,15 +26,15 @@
       "id": 2,
       "name": "주석 31_01",
       "items": [
-        {"code": "601000000", "name": "유형자산처분이익",  "base": ["당기, 전기"], "isCustom": false, "value": 28777, "전기": 26981},
-        {"code": "609000000", "name": "무형자산처분이익",  "base": ["당기, 전기"], "isCustom": false, "value": 626133, "전기": null},
-        {"code": "602000000", "name": "잡이익",  "base": ["당기, 전기"], "isCustom": false, "value": 738396, "전기": 5250537},
-        {"code": "520010000", "name": "관계·종속기업투자주식손상차손",  "base": ["당기, 전기"], "isCustom": false, "value": 5902610, "전기": 5277518},
-        {"code": "701000000", "name": "유형자산처분손실",  "base": ["당기, 전기"], "isCustom": false, "value": 115931, "전기": 8267280},
-        {"code": "705000000", "name": "유형자산손상차손",  "base": ["당기, 전기"], "isCustom": false, "value": null, "전기": 23383},
-        {"code": "702000000", "name": "기부금",  "base": ["당기, 전기"], "isCustom": false, "value": 10000, "전기": 1377000},
-        {"code": "707000000", "name": "과징금등",  "base": ["당기, 전기"], "isCustom": false, "value": 1050, "전기": null},
-        {"code": "704000000", "name": "잡손실",  "base": ["당기, 전기"], "isCustom": false, "value": 1381107, "전기": 1132675}
+        {"code": "601000000", "name": "유형자산처분이익",  "base": ["당기", "전기"], "isCustom": false, "value": 28777, "전기": 26981},
+        {"code": "609000000", "name": "무형자산처분이익",  "base": ["당기", "전기"], "isCustom": false, "value": 626133, "전기": null},
+        {"code": "602000000", "name": "잡이익",  "base": ["당기", "전기"], "isCustom": false, "value": 738396, "전기": 5250537},
+        {"code": "520010000", "name": "관계·종속기업투자주식손상차손",  "base": ["당기", "전기"], "isCustom": false, "value": 5902610, "전기": 5277518},
+        {"code": "701000000", "name": "유형자산처분손실",  "base": ["당기", "전기"], "isCustom": false, "value": 115931, "전기": 8267280},
+        {"code": "705000000", "name": "유형자산손상차손",  "base": ["당기", "전기"], "isCustom": false, "value": null, "전기": 23383},
+        {"code": "702000000", "name": "기부금",  "base": ["당기", "전기"], "isCustom": false, "value": 10000, "전기": 1377000},
+        {"code": "707000000", "name": "과징금등",  "base": ["당기", "전기"], "isCustom": false, "value": 1050, "전기": null},
+        {"code": "704000000", "name": "잡손실",  "base": ["당기", "전기"], "isCustom": false, "value": 1381107, "전기": 1132675}
       ]
     }
   ]

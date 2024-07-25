@@ -26,7 +26,6 @@ import { CheckboxGroup } from '../ui/checkbox';
 import { DataGrid } from '../ui/tanstack-grid';
 import { ColumnDef } from '@tanstack/react-table';
 
-const HEADERS_TO_EXCLLUDE = ['전기', '전기말'];
 const field_headers = ['Code', 'Name'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
@@ -45,7 +44,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const headers = useMemo(
     () =>
       Object.keys(report.itemsDisplayInfo)
-        .filter((key) => report.itemsDisplayInfo[key] === true && !HEADERS_TO_EXCLLUDE.includes(key))
+        .filter((key) => report.itemsDisplayInfo[key] !== false)
         .map((key) => `${key.charAt(0).toUpperCase()}${key.slice(1)}`),
 
     [report.itemsDisplayInfo],
@@ -213,6 +212,26 @@ export const Report: FC<ReportProps> = ({ route }) => {
           }),
         );
         break;
+      case '주석 31_01':
+        setLineItems((prev) =>
+          prev.map((item, i) => {
+            if (lineItemGroups.length === 0) {
+              if (item.code === '602000000' || item.code === '704000000') {
+                item[groupId] = '기타';
+              } else if (item.code === '520010000') {
+                item[groupId] = '관계∙종속기업손상차손';
+              } else if (item.code === '707000000') {
+                item[groupId] = '과징금';
+              } else {
+                item[groupId] = item.name;
+              }
+            } else if (lineItemGroups.length === 1) {
+              item[groupId] = i < 3 ? '영업외수익' : '영업외비용';
+            }
+            return item;
+          }),
+        );
+        break;
       default:
         setLineItems((prev) =>
           prev.map((item) => {
@@ -335,7 +354,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             );
                           })}
                           <td className='px-5'></td>
-                          <td className='px-5'>{item.base}</td>
+                          <td className='px-5'>{item.base.join(', ')}</td>
                         </tr>
                       );
                     })}

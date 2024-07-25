@@ -39,16 +39,15 @@ export const useCreateTable = () => {
 
     const columns: ColumnDef<GridRowData>[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
       const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
+      const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
 
       return {
-        header: typeof col === 'string' ? col : col.name,
+        header: header,
         accessorKey: key,
         id: key, // Use `id` to identify the column
         cell: (row) => row.getValue() || '-',
       };
     });
-    // columns.push({ header: 'Value', accessorKey: 'value', cell: (row) => row.getValue() || '-' });
-    // columns.push({ header: 'LTD (Base)', accessorKey: 'base' });
 
     const rows = [];
     for (const item of lineItems) {
