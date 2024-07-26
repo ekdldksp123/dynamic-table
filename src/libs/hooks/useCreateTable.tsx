@@ -6,6 +6,7 @@ import {
   ILineItemGroup,
   ItemValueType,
   KeyTypeFromItemValue,
+  LineItemKey,
   Subtotal,
   Subtotals,
 } from '@/types';
@@ -48,6 +49,11 @@ export const useCreateTable = () => {
         header: firstRowName,
         accessorKey: 'division',
         id: 'division',
+        cell: ({ getValue }) => {
+          const value = getValue() as string;
+          const htmlValue = value.replace(/\s/g, '\u00A0'); // Replacing spaces with non-breaking spaces
+          return <>{htmlValue}</>;
+        },
       },
     ];
 
@@ -62,14 +68,41 @@ export const useCreateTable = () => {
         header: header,
         accessorKey: key,
         id: key, // Use `id` to identify the column
-        cell: (row) => row.getValue() || '-',
+        cell: (row) => (row.getValue() === 0 ? '-' : row.getValue()),
       };
     });
     columns.push(...valueColumns);
 
+    const groupedRowData: GroupedData = groupByHierarchical(
+      lineItems,
+      rowGroup.map(({ groupId }) => groupId),
+    );
+
+    const rows: GridRowData[] = extractKeysWithIndent(groupedRowData);
+
+    const lastGroupId = rowGroup[rowGroup.length - 1].groupId;
+
+    const { groupValues, lineItemCodesMap } = getGroupValuesAndCodes(lineItems, lastGroupId);
+    console.log({ groupValues, lineItemCodesMap });
+
+    for (const row of rows) {
+      const findGroupValueIndex = groupValues.findIndex((v) => v === (row.division as string).trim());
+      if (findGroupValueIndex > -1) {
+        const itemKey = groupValues[findGroupValueIndex] as LineItemKey;
+        const itemCodes = lineItemCodesMap[itemKey];
+        row.value = lineItems
+          .filter((item) => itemCodes.includes(item.code))
+          .reduce((sum, cur) => sum + (cur.value ?? 0), 0);
+      } else {
+        row.value = null;
+      }
+    }
+
+    console.log({ columns: columns, rows: rows });
+
     return {
       columns,
-      rows: [],
+      rows,
     };
   };
 
@@ -262,6 +295,27 @@ export const useCreateTable = () => {
       columns,
       rows,
     };
+  };
+
+  const extractKeysWithIndent = (
+    groupedData: GroupedData | ILineItem[],
+    indentLevel: number = 0,
+    result: { division: string }[] = [],
+  ): { division: string }[] => {
+    if (Array.isArray(groupedData)) return result;
+
+    const indent = '    '.repeat(indentLevel);
+
+    for (const key in groupedData) {
+      const division = `${indent}${key}`;
+      result.push({ division });
+
+      if (typeof groupedData[key] === 'object' && groupedData[key] !== null && !Array.isArray(groupedData[key])) {
+        extractKeysWithIndent(groupedData[key], indentLevel + 1, result);
+      }
+    }
+
+    return result;
   };
 
   //주어진 그룹의 유니크한 값과 그 값에 해당하는 아이템 코드 구하기

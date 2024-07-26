@@ -4,7 +4,6 @@ import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMem
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ReportProps } from '@/routes/reports/$reportId';
-import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { v4 as uuidv4 } from 'uuid';
 import update from 'immutability-helper';
 import { VscDiffAdded, VscDiffRemoved } from 'react-icons/vsc';
@@ -25,6 +24,7 @@ import { CheckedState } from '@radix-ui/react-checkbox';
 import { CheckboxGroup } from '../ui/checkbox';
 import { DataGrid } from '../ui/tanstack-grid';
 import { ColumnDef } from '@tanstack/react-table';
+import { useCreateTable } from '@/libs/hooks/useCreateTable';
 
 const field_headers = ['Code', 'Name'];
 

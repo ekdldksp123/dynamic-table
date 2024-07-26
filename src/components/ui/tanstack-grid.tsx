@@ -89,7 +89,7 @@ export const DataGrid: FC<DataGridProps> = ({ data, columns }) => {
                 return (
                   <td
                     key={cell.id}
-                    className='px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white text-center'
+                    className='px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white'
                     {...{
                       style: {
                         background: cell.getIsGrouped()
