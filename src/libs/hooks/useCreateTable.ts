@@ -27,6 +27,13 @@ interface IGetBasicGridData {
   lineItemGroups: ILineItemGroup[];
 }
 
+interface IGetOnlyRowGroupGridData {
+  headers: string[];
+  rowGroup: ILineItemGroup[];
+  lineItems: ILineItem[];
+  lineItemGroups: ILineItemGroup[];
+}
+
 type GridColumnsData = {
   columns: unknown[];
   fieldValuesMap: Record<string, ILineItem[]>;
@@ -34,6 +41,38 @@ type GridColumnsData = {
 };
 
 export const useCreateTable = () => {
+  const getOnlyRowGroupGridData = ({ headers, rowGroup, lineItems, lineItemGroups }: IGetOnlyRowGroupGridData) => {
+    const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
+    const columns: ColumnDef<GridRowData>[] = [
+      {
+        header: firstRowName,
+        accessorKey: 'division',
+        id: 'division',
+      },
+    ];
+
+    const valueColumns: ColumnDef<GridRowData>[] = [
+      ...headers,
+      ...lineItemGroups.filter((group) => !rowGroup.find((rowG) => rowG.groupId === group.groupId)),
+    ].map((col: string | ILineItemGroup) => {
+      const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
+      const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+
+      return {
+        header: header,
+        accessorKey: key,
+        id: key, // Use `id` to identify the column
+        cell: (row) => row.getValue() || '-',
+      };
+    });
+    columns.push(...valueColumns);
+
+    return {
+      columns,
+      rows: [],
+    };
+  };
+
   const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
 
@@ -397,5 +436,5 @@ export const useCreateTable = () => {
     return traverse(groupedData);
   };
 
-  return { getBasicGridData, getPivotGridData, calculateSubtotals };
+  return { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData, calculateSubtotals };
 };

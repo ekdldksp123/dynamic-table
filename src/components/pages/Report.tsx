@@ -40,7 +40,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
-  const { getBasicGridData, getPivotGridData } = useCreateTable();
+  const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
   const headers = useMemo(
     () =>
       Object.keys(report.itemsDisplayInfo)
@@ -58,10 +58,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
     // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
     if (!colGroup.length && rowGroup.length && lineItems.length) {
-      return {
-        columns: [],
-        rows: [],
-      };
+      return getOnlyRowGroupGridData({ headers, rowGroup, lineItems, lineItemGroups });
     }
 
     // 피봇 테이블 o
@@ -79,6 +76,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
     getBasicGridData,
     headers,
     lineItemGroups,
+    getOnlyRowGroupGridData,
     getPivotGridData,
     showColsTotal,
     showRowsTotal,
@@ -112,6 +110,16 @@ export const Report: FC<ReportProps> = ({ route }) => {
       );
     },
     [rowGroup],
+  );
+
+  const removeFromRowGroup = useCallback(
+    (groupId: string) => setRowGroup((prev) => [...prev.filter((group) => group.groupId !== groupId)]),
+    [],
+  );
+
+  const removeFromColGroup = useCallback(
+    (groupId: string) => setColGroup((prev) => [...prev.filter((group) => group.groupId !== groupId)]),
+    [],
   );
 
   const onChangeRowShowTotal = useCallback(
@@ -161,11 +169,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
           group={group}
           index={index}
           onMoveGroup={moveRowGroup}
+          onRemoveGroup={removeFromRowGroup}
           onChangeShowTotal={onChangeRowShowTotal}
         />
       );
     },
-    [moveRowGroup, onChangeRowShowTotal],
+    [moveRowGroup, onChangeRowShowTotal, removeFromRowGroup],
   );
 
   const renderColumn = useCallback(
@@ -177,11 +186,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
           group={group}
           index={index}
           onMoveGroup={moveColGroup}
+          onRemoveGroup={removeFromColGroup}
           onChangeShowTotal={onChangeColShowTotal}
         />
       );
     },
-    [moveColGroup, onChangeColShowTotal],
+    [moveColGroup, onChangeColShowTotal, removeFromColGroup],
   );
 
   const onAddGroup = useCallback(() => {

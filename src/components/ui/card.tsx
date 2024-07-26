@@ -5,12 +5,13 @@ import { FC, useRef } from 'react';
 import { useDrop, DropTargetMonitor, useDrag, DragSourceMonitor } from 'react-dnd';
 import { CheckboxGroup } from '@/components/ui/checkbox';
 import { CheckedState } from '@radix-ui/react-checkbox';
-
+import { CiSquareRemove } from 'react-icons/ci';
 interface GroupCardProps {
   id: string;
   group: ILineItemGroup;
   index: number;
   onMoveGroup: (dragIndex: number, hoverIndex: number) => void;
+  onRemoveGroup: (groupId: string) => void;
   onChangeShowTotal: (index: number, showTotal: CheckedState) => void;
 }
 
@@ -24,7 +25,7 @@ const ItemTypes = {
   CARD: 'card',
 };
 
-export const GroupCard: FC<GroupCardProps> = ({ id, group, index, onMoveGroup, onChangeShowTotal }) => {
+export const GroupCard: FC<GroupCardProps> = ({ id, group, index, onMoveGroup, onRemoveGroup, onChangeShowTotal }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   const [, drop] = useDrop({
@@ -85,14 +86,23 @@ export const GroupCard: FC<GroupCardProps> = ({ id, group, index, onMoveGroup, o
     <div
       ref={ref}
       key={`group-card-${group.groupId}`}
-      className={classNames('px-5 py-3 bg-indigo-200 cursor-pointer opacity-100', isDragging ? '!opacity-50' : '')}
+      className={classNames(
+        'relative flex w-[100%] px-5 py-3 bg-indigo-200 cursor-move opacity-100',
+        isDragging ? '!opacity-50' : '',
+      )}
     >
-      {group.name}
-      <CheckboxGroup
-        id={group.groupId}
-        label='Show Subtotal'
-        checked={group.showTotal}
-        onCheckedChange={(v) => onChangeShowTotal(index, v)}
+      <div>
+        {group.name}
+        <CheckboxGroup
+          id={group.groupId}
+          label='Show Subtotal'
+          checked={group.showTotal}
+          onCheckedChange={(v) => onChangeShowTotal(index, v)}
+        />
+      </div>
+      <CiSquareRemove
+        className='absolute right-3 w-[20px] h-[20px] cursor-pointer'
+        onClick={() => onRemoveGroup(group.groupId)}
       />
     </div>
   );
