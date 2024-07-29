@@ -57,7 +57,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
     // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
     if (!colGroup.length && rowGroup.length && lineItems.length) {
-      return getOnlyRowGroupGridData({ headers, rowGroup, lineItems, lineItemGroups });
+      return getOnlyRowGroupGridData({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal });
     }
 
     // 피봇 테이블 o

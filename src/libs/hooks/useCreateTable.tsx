@@ -32,6 +32,7 @@ interface IGetOnlyRowGroupGridData {
   rowGroup: ILineItemGroup[];
   lineItems: ILineItem[];
   lineItemGroups: ILineItemGroup[];
+  showRowsTotal: CheckedState;
 }
 
 type GridColumnsData = {
@@ -41,7 +42,13 @@ type GridColumnsData = {
 };
 
 export const useCreateTable = () => {
-  const getOnlyRowGroupGridData = ({ headers, rowGroup, lineItems, lineItemGroups }: IGetOnlyRowGroupGridData) => {
+  const getOnlyRowGroupGridData = ({
+    headers,
+    rowGroup,
+    lineItems,
+    lineItemGroups,
+    showRowsTotal,
+  }: IGetOnlyRowGroupGridData) => {
     const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
     const columns: GridColumn[] = [
       {
@@ -71,13 +78,42 @@ export const useCreateTable = () => {
 
     const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns });
 
-    console.log({ columns, rows });
+    if (showRowsTotal) {
+      const totalRow: GridRowData = { division: 'Total', total: true };
+      for (const { key } of valueColumns) {
+        totalRow[key] = rows.reduce((sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])), 0);
+      }
+      rows.push(totalRow);
+    }
+
+    const showSubtotalGroups = rowGroup.filter((group) => group.showTotal === true);
+
+    // if (showSubtotalGroups.length && !showRowsTotal) {
+    //   //   const subtotals = calculateRowGroupSubtotals(groupedRowData);
+    //   console.log({ showSubtotalGroups });
+    //   for (const group of showSubtotalGroups) {
+    //     calculateRowGroupSubtotals(groupedRowData, group.level);
+    //   }
+    // }
+
+    // console.log({ columns, rows });
 
     return {
       columns,
       rows,
     };
   };
+
+  // const calculateRowGroupSubtotals = (groupedData: GroupedData, groupLevel: number) => {
+
+  //   const result: Record<string, Record<string, number>[]> = {}
+  //   const traverse = (data: GroupedData | ILineItem[], depth: number, parentName: string) => {
+  //     if (Array.isArray(data) && parentName !== '') {
+  //       result[parentName].push(data.map(item => item))
+  //     }
+  //   };
+  //   traverse(groupedData, 0, '');
+  // };
 
   const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
@@ -133,7 +169,7 @@ export const useCreateTable = () => {
 
     //열 그룹 소계 표시 여부 확인 및 계산 로직
     const showSubtotalGroups = colGroup.filter((group) => group.showTotal === true);
-    const subtotals = calculateSubtotals(groupedColumnData);
+    const subtotals = calculateColGroupSubtotals(groupedColumnData);
 
     if (showSubtotalGroups.length) {
       const hasDuplicateKeys = checkSubgroupKeys(groupedColumnData);
@@ -264,10 +300,11 @@ export const useCreateTable = () => {
       const row: GridRowData = { division };
       if (Array.isArray(groupedData[field]) && groupedData[field].length) {
         for (const col of valueColumns) {
-          row[col.key] = (groupedData[field] as ILineItem[]).reduce(
+          const value = (groupedData[field] as ILineItem[]).reduce(
             (sum, cur) => sum + (isNaN(Number(cur[col.key])) ? 0 : Number(cur[col.key])),
             0,
           );
+          row[col.key] = value;
         }
       }
 
@@ -377,7 +414,7 @@ export const useCreateTable = () => {
     return { columns: columnDefs, fieldValuesMap, total };
   };
 
-  const calculateSubtotals = (data: GroupedData): Subtotals => {
+  const calculateColGroupSubtotals = (data: GroupedData): Subtotals => {
     const result: { [key: string]: { [name: string]: number } } = {};
 
     const addValue = (map: { [name: string]: number }, index: number, value: number) => {
@@ -456,5 +493,5 @@ export const useCreateTable = () => {
     return traverse(groupedData);
   };
 
-  return { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData, calculateSubtotals };
+  return { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData, calculateColGroupSubtotals };
 };
