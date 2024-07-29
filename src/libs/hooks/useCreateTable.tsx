@@ -64,8 +64,6 @@ export const useCreateTable = () => {
     });
     columns.push(...valueColumns);
 
-    console.log({ valueColumns });
-
     const groupedRowData: GroupedData = groupByHierarchical(
       lineItems,
       rowGroup.map(({ groupId }) => groupId),
