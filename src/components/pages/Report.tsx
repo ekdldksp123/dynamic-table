@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ItemValueType, ILineItem, ILineItemGroup, IReport, GridRowData } from '@/types';
+import { ItemValueType, ILineItem, ILineItemGroup, IReport } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,8 @@ import {
 } from '@/components/ui/select';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { CheckboxGroup } from '../ui/checkbox';
-import { DataGrid } from '../ui/tanstack-grid';
-import { ColumnDef } from '@tanstack/react-table';
 import { useCreateTable } from '@/libs/hooks/useCreateTable';
+import { CustomGrid } from '../ui/custom-grid';
 
 const field_headers = ['Code', 'Name'];
 
@@ -398,7 +397,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
           </section>
         </section>
         <p className='mt-5 text-lg font-bold'>Preview</p>
-        <DataGrid columns={columns as ColumnDef<GridRowData, unknown>[]} data={rows} />
+        <CustomGrid columns={columns} rows={rows} />
       </div>
     </div>
   );

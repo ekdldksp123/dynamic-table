@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+  GridColumn,
   GridRowData,
   GroupedData,
   ILineItem,
@@ -11,7 +12,6 @@ import {
   Subtotals,
 } from '@/types';
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { areStringArraysEqual } from '../utils';
 
 interface IGetPivotGridData {
@@ -36,7 +36,7 @@ interface IGetOnlyRowGroupGridData {
 }
 
 type GridColumnsData = {
-  columns: unknown[];
+  columns: GridColumn[];
   fieldValuesMap: Record<string, ILineItem[]>;
   total: number;
 };
@@ -44,20 +44,14 @@ type GridColumnsData = {
 export const useCreateTable = () => {
   const getOnlyRowGroupGridData = ({ headers, rowGroup, lineItems, lineItemGroups }: IGetOnlyRowGroupGridData) => {
     const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
-    const columns: ColumnDef<GridRowData>[] = [
+    const columns: GridColumn[] = [
       {
-        header: firstRowName,
-        accessorKey: 'division',
-        id: 'division',
-        cell: ({ getValue }) => {
-          const value = getValue() as string;
-          const htmlValue = value.replace(/\s/g, '\u00A0'); // Replacing spaces with non-breaking spaces
-          return <>{htmlValue}</>;
-        },
+        title: firstRowName,
+        key: 'division',
       },
     ];
 
-    const valueColumns: ColumnDef<GridRowData>[] = [
+    const valueColumns: GridColumn[] = [
       ...headers,
       ...lineItemGroups.filter((group) => !rowGroup.find((rowG) => rowG.groupId === group.groupId)),
     ].map((col: string | ILineItemGroup) => {
@@ -65,10 +59,8 @@ export const useCreateTable = () => {
       const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
 
       return {
-        header: header,
-        accessorKey: key,
-        id: key, // Use `id` to identify the column
-        cell: (row) => (row.getValue() === 0 ? '-' : row.getValue()),
+        title: header,
+        key: key,
       };
     });
     columns.push(...valueColumns);
@@ -98,7 +90,7 @@ export const useCreateTable = () => {
       }
     }
 
-    console.log({ columns: columns, rows: rows });
+    console.log({ children: columns, rows: rows });
 
     return {
       columns,
@@ -109,15 +101,13 @@ export const useCreateTable = () => {
   const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
 
-    const columns: ColumnDef<GridRowData>[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
+    const columns: GridColumn[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
       const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
       const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
 
       return {
-        header: header,
-        accessorKey: key,
-        id: key, // Use `id` to identify the column
-        cell: (row) => row.getValue() || '-',
+        title: header,
+        key: key,
       };
     });
 
@@ -125,7 +115,7 @@ export const useCreateTable = () => {
     for (const item of lineItems) {
       const data: Record<string, ItemValueType> = {};
       for (const col of columns) {
-        const key = col.id;
+        const key = col.key;
         if (key) {
           data[key] = item[key];
         }
@@ -145,7 +135,6 @@ export const useCreateTable = () => {
   const getPivotGridData = ({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal }: IGetPivotGridData) => {
     // console.log({ colGroup, rowGroup });
     // 행과 열 그룹별로 컬럼과 행을 구성
-    const columnHelper = createColumnHelper<GridRowData>();
 
     const groupedColumnData: GroupedData = groupByHierarchical(
       lineItems,
@@ -180,20 +169,18 @@ export const useCreateTable = () => {
 
           const subtotalKeys = Object.keys(subtotals);
           if (areStringArraysEqual(subtotalKeys, groupValues as string[])) {
-            columns.push(
-              columnHelper.group({
-                id: 'subtotal',
-                header: '합계',
-                columns: subtotalKeys.map((key) => {
-                  const accessorKey = `${key}_subtotal`;
-                  fields.push(accessorKey);
-                  return columnHelper.accessor(accessorKey, {
-                    header: key,
-                    aggregationFn: 'sum', //TODO 이거 어떻게 쓰는지?
-                  });
-                }),
+            columns.push({
+              key: 'subtotal',
+              title: '합계',
+              children: subtotalKeys.map((key) => {
+                const accessorKey = `${key}_subtotal`;
+                fields.push(accessorKey);
+                return {
+                  title: key,
+                  key: accessorKey,
+                };
               }),
-            );
+            });
           }
         }
       } else {
@@ -202,36 +189,14 @@ export const useCreateTable = () => {
     }
 
     const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
-    //TODO header rowSpan...
-    // const firstColumn = colGroup.length
-    //   ? columnHelper.group({
-    //       id: 'division',
-    //       header: firstRowName,
-    //       columns: [
-    //         columnHelper.accessor('division', {
-    //           header: undefined,
-    //         }),
-    //       ],
-    //       meta: {
-    //         rowSpan: colGroup.length,
-    //       },
-    //     })
-    //   : columnHelper.accessor('division', {
-    //       id: 'division',
-    //       header: firstRowName,
-    //     });
 
     columns.unshift({
-      id: 'division',
-      accessorKey: 'division',
-      header: firstRowName,
-      meta: {
-        rowSpan: colGroup.length,
-      },
+      key: 'division',
+      title: firstRowName,
     });
 
     if (showColsTotal) {
-      columns.push({ header: '총계', accessorKey: 'total' });
+      columns.push({ title: '총계', key: 'total' });
       fields.push('total');
     }
 
@@ -304,7 +269,7 @@ export const useCreateTable = () => {
   ): { division: string }[] => {
     if (Array.isArray(groupedData)) return result;
 
-    const indent = '    '.repeat(indentLevel);
+    const indent = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'.repeat(indentLevel);
 
     for (const key in groupedData) {
       const division = `${indent}${key}`;
@@ -371,12 +336,11 @@ export const useCreateTable = () => {
 
   // 그룹핑된 데이터로 테이블 컬럼, 값 필드, 그룹에 해당하는 값 배열 추출하기
   const transformToGridColumnsData = (groupedData: GroupedData): GridColumnsData => {
-    const columnHelper = createColumnHelper<GridRowData>();
-    const columnDefs: unknown[] = [];
+    const columnDefs: GridColumn[] = [];
     const fieldValuesMap: Record<string, ILineItem[]> = {};
     let total = 0;
 
-    const traverse = (data: GroupedData | ILineItem[], parentName: string | null): unknown[] => {
+    const traverse = (data: GroupedData | ILineItem[], parentName: string | null): GridColumn[] => {
       if (Array.isArray(data)) {
         if (parentName) {
           fieldValuesMap[parentName] = [...data];
@@ -392,16 +356,15 @@ export const useCreateTable = () => {
         const childName = parentName ? `${parentName}_${key}` : key;
         const children = traverse(data[key], childName);
         const columnDef = children.length
-          ? columnHelper.group({
-              header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
-              columns: children as ColumnDef<GridRowData, unknown>[],
-            })
-          : columnHelper.accessor(childName, {
-              header: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
-              aggregationFn: 'sum', //TODO 이거 어떻게 쓰는지?
-              cell: (row) => row.getValue() || '-',
-            });
-
+          ? {
+              title: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+              key,
+              children: children as GridColumn[],
+            }
+          : {
+              title: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+              key: childName,
+            };
         return columnDef;
       });
     };

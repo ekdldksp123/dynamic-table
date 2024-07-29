@@ -1,5 +1,3 @@
-import { ColDef, ColGroupDef } from '@ag-grid-community/core';
-
 export interface ILineItemGroup {
   groupId: string;
   name: string;
@@ -38,7 +36,13 @@ export type ItemValueType = string | string[] | number | boolean | null | undefi
 
 export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | null | undefined>;
 
-export type GridColumnDef = ColDef | ColGroupDef;
+// export type GridColumnDef = ColDef | ColGroupDef;
+
+export type GridColumn = {
+  title: string;
+  key: string;
+  children?: GridColumn[];
+};
 
 export type GridRowData = {
   division?: ItemValueType;
