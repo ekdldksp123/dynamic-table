@@ -44,7 +44,7 @@ export const CustomGrid: FC<CustomGridProps> = ({ columns, rows }) => {
             <tr key={rowIndex} className='border-t'>
               {flattenColumns(columns).map((column) => (
                 <td key={column.key} className='px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white'>
-                  {row[column.key]}
+                  {row[column.key] === 0 ? '-' : row[column.key]}
                 </td>
               ))}
             </tr>

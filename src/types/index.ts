@@ -16,15 +16,15 @@ export interface ILineItem {
   value?: number; //LTD (Base) - 당기, 당기말
 }
 
+export type GroupedData = {
+  [key: string]: GroupedData | ILineItem[];
+};
+
 export type LineItemKey = keyof ILineItem;
 
 export interface ILineItemColumnDisplayOrNot {
   [key: LineItemKey]: boolean | undefined;
 }
-
-export type GroupedData = {
-  [key: string]: GroupedData | ILineItem[];
-};
 
 export type Subtotals = {
   [key: string]: Subtotals | Subtotal[];

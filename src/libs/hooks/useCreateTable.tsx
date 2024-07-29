@@ -7,7 +7,6 @@ import {
   ILineItemGroup,
   ItemValueType,
   KeyTypeFromItemValue,
-  LineItemKey,
   Subtotal,
   Subtotals,
 } from '@/types';
@@ -65,32 +64,16 @@ export const useCreateTable = () => {
     });
     columns.push(...valueColumns);
 
+    console.log({ valueColumns });
+
     const groupedRowData: GroupedData = groupByHierarchical(
       lineItems,
       rowGroup.map(({ groupId }) => groupId),
     );
 
-    const rows: GridRowData[] = extractKeysWithIndent(groupedRowData);
+    const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns });
 
-    const lastGroupId = rowGroup[rowGroup.length - 1].groupId;
-
-    const { groupValues, lineItemCodesMap } = getGroupValuesAndCodes(lineItems, lastGroupId);
-    console.log({ groupValues, lineItemCodesMap });
-
-    for (const row of rows) {
-      const findGroupValueIndex = groupValues.findIndex((v) => v === (row.division as string).trim());
-      if (findGroupValueIndex > -1) {
-        const itemKey = groupValues[findGroupValueIndex] as LineItemKey;
-        const itemCodes = lineItemCodesMap[itemKey];
-        row.value = lineItems
-          .filter((item) => itemCodes.includes(item.code))
-          .reduce((sum, cur) => sum + (cur.value ?? 0), 0);
-      } else {
-        row.value = null;
-      }
-    }
-
-    console.log({ children: columns, rows: rows });
+    console.log({ columns, rows });
 
     return {
       columns,
@@ -262,21 +245,43 @@ export const useCreateTable = () => {
     };
   };
 
-  const extractKeysWithIndent = (
-    groupedData: GroupedData | ILineItem[],
-    indentLevel: number = 0,
-    result: { division: string }[] = [],
-  ): { division: string }[] => {
+  const extractRowsWithIndent = ({
+    groupedData,
+    indentLevel = 0,
+    result = [],
+    valueColumns,
+  }: {
+    groupedData: GroupedData | ILineItem[];
+    indentLevel?: number;
+    result?: GridRowData[];
+    valueColumns: GridColumn[];
+  }): GridRowData[] => {
     if (Array.isArray(groupedData)) return result;
 
     const indent = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'.repeat(indentLevel);
 
-    for (const key in groupedData) {
-      const division = `${indent}${key}`;
-      result.push({ division });
+    for (const field in groupedData) {
+      const division = `${indent}${field}`;
 
-      if (typeof groupedData[key] === 'object' && groupedData[key] !== null && !Array.isArray(groupedData[key])) {
-        extractKeysWithIndent(groupedData[key], indentLevel + 1, result);
+      const row: GridRowData = { division };
+      if (Array.isArray(groupedData[field]) && groupedData[field].length) {
+        for (const col of valueColumns) {
+          row[col.key] = (groupedData[field] as ILineItem[]).reduce(
+            (sum, cur) => sum + (isNaN(Number(cur[col.key])) ? 0 : Number(cur[col.key])),
+            0,
+          );
+        }
+      }
+
+      result.push(row);
+
+      if (typeof groupedData[field] === 'object' && groupedData[field] !== null && !Array.isArray(groupedData[field])) {
+        extractRowsWithIndent({
+          groupedData: groupedData[field],
+          indentLevel: indentLevel + 1,
+          result,
+          valueColumns,
+        });
       }
     }
 
