@@ -41,21 +41,23 @@ export const CustomGrid: FC<CustomGridProps> = ({ columns, rows }) => {
       <table className='min-w-full bg-white'>
         <thead className='w-[100%] bg-[#DCE2F7] border-b font-medium border-white'>{renderHeaders()}</thead>
         <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className='border-t'>
-              {flattenColumns(columns).map((column, i) => (
-                <td
-                  key={column.key}
-                  className={classNames(
-                    'px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white',
-                    i === 0 && i !== columns.length - 1 ? '!bg-[#DCE2F7] font-semibold' : 'font-medium',
-                  )}
-                >
-                  {row[column.key] === 0 ? '-' : row[column.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows
+            .filter((row) => row.show !== false)
+            .map((row, rowIndex) => (
+              <tr key={rowIndex} className='border-t'>
+                {flattenColumns(columns).map((column, i) => (
+                  <td
+                    key={column.key}
+                    className={classNames(
+                      'px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white',
+                      i === 0 && i !== columns.length - 1 ? '!bg-[#DCE2F7] font-semibold' : 'font-medium',
+                    )}
+                  >
+                    {row[column.key] === 0 ? '-' : row[column.key]}
+                  </td>
+                ))}
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>

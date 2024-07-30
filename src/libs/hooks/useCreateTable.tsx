@@ -88,32 +88,19 @@ export const useCreateTable = () => {
 
     const showSubtotalGroups = rowGroup.filter((group) => group.showTotal === true);
 
-    // if (showSubtotalGroups.length && !showRowsTotal) {
-    //   //   const subtotals = calculateRowGroupSubtotals(groupedRowData);
-    //   console.log({ showSubtotalGroups });
-    //   for (const group of showSubtotalGroups) {
-    //     calculateRowGroupSubtotals(groupedRowData, group.level);
-    //   }
-    // }
-
-    // console.log({ columns, rows });
+    for (const group of showSubtotalGroups) {
+      for (const row of rows) {
+        if (row.depth === group.level && row.show !== undefined && row.show === false) {
+          row.show = true;
+        }
+      }
+    }
 
     return {
       columns,
       rows,
     };
   };
-
-  // const calculateRowGroupSubtotals = (groupedData: GroupedData, groupLevel: number) => {
-
-  //   const result: Record<string, Record<string, number>[]> = {}
-  //   const traverse = (data: GroupedData | ILineItem[], depth: number, parentName: string) => {
-  //     if (Array.isArray(data) && parentName !== '') {
-  //       result[parentName].push(data.map(item => item))
-  //     }
-  //   };
-  //   traverse(groupedData, 0, '');
-  // };
 
   const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
@@ -294,6 +281,7 @@ export const useCreateTable = () => {
 
     const indent = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'.repeat(indentLevel);
 
+    const subtotal: Record<string, number> = {};
     for (const field in groupedData) {
       const division = `${indent}${field}`;
 
@@ -305,6 +293,11 @@ export const useCreateTable = () => {
             0,
           );
           row[col.key] = value;
+          if (subtotal[col.key] === undefined) {
+            subtotal[col.key] = value;
+          } else {
+            subtotal[col.key] += value;
+          }
         }
       }
 
@@ -318,6 +311,16 @@ export const useCreateTable = () => {
           valueColumns,
         });
       }
+    }
+
+    const subtotalRow: GridRowData = { division: `${indent}합계`, show: false, depth: indentLevel };
+    const subtotalEntries = Object.entries(subtotal);
+
+    if (subtotalEntries.length) {
+      Object.entries(subtotal).forEach(([key, value]) => {
+        subtotalRow[key] = value;
+      });
+      result.push(subtotalRow);
     }
 
     return result;
