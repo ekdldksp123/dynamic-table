@@ -12,6 +12,7 @@ import {
 } from '@/types';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { areStringArraysEqual } from '../utils';
+import { useCallback } from 'react';
 
 interface IGetPivotGridData {
   lineItems: ILineItem[];
@@ -42,103 +43,180 @@ type GridColumnsData = {
 };
 
 export const useCreateTable = () => {
-  const getOnlyRowGroupGridData = ({
-    headers,
-    rowGroup,
-    lineItems,
-    lineItemGroups,
-    showRowsTotal,
-  }: IGetOnlyRowGroupGridData) => {
-    const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
-    const columns: GridColumn[] = [
-      {
-        title: firstRowName,
-        key: 'division',
-      },
-    ];
+  const extractRowsWithIndent = useCallback(
+    ({
+      groupedData,
+      indentLevel = 0,
+      result = [],
+      valueColumns,
+    }: {
+      groupedData: GroupedData | ILineItem[];
+      indentLevel?: number;
+      result?: GridRowData[];
+      valueColumns: GridColumn[];
+    }): GridRowData[] => {
+      if (Array.isArray(groupedData)) return result;
 
-    const valueColumns: GridColumn[] = [];
+      const indent = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'.repeat(indentLevel);
 
-    const firstItem = lineItems[0];
-    if (firstItem.base.length >= 2 && firstItem.value === undefined) {
-      const baseColumnGroups: GridColumn[] = lineItems[0].base.map((base) => {
-        return {
-          key: base,
-          title: base,
-          children: [],
-        };
-      });
+      const subtotal: Record<string, number> = {};
+      for (const field in groupedData) {
+        const division = `${indent}${field}`;
 
-      for (const header of headers) {
-        const headerArr = header.split('_');
-        const column = headerArr[0];
-        const group = headerArr[1];
-        const findGroupIndex = baseColumnGroups.findIndex((g) => g.key === group);
-        if (findGroupIndex > -1) {
-          baseColumnGroups[findGroupIndex].children?.push({
-            title: column,
-            key: header,
+        const row: GridRowData = { division };
+        if (Array.isArray(groupedData[field]) && groupedData[field].length) {
+          for (const col of valueColumns) {
+            if (col.children && col.children.length) {
+              for (const child of col.children) {
+                const key = child.key;
+                const value = (groupedData[field] as ILineItem[]).reduce(
+                  (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
+                  0,
+                );
+                row[key] = value;
+                if (subtotal[key] === undefined) {
+                  subtotal[key] = value;
+                } else {
+                  subtotal[key] += value;
+                }
+              }
+            } else {
+              const key = col.key;
+              const value = (groupedData[field] as ILineItem[]).reduce(
+                (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
+                0,
+              );
+              row[key] = value;
+              if (subtotal[key] === undefined) {
+                subtotal[key] = value;
+              } else {
+                subtotal[key] += value;
+              }
+            }
+          }
+        }
+
+        result.push(row);
+
+        if (
+          typeof groupedData[field] === 'object' &&
+          groupedData[field] !== null &&
+          !Array.isArray(groupedData[field])
+        ) {
+          extractRowsWithIndent({
+            groupedData: groupedData[field],
+            indentLevel: indentLevel + 1,
+            result,
+            valueColumns,
           });
         }
       }
-      valueColumns.push(...baseColumnGroups);
-      columns.push(...baseColumnGroups);
-    } else {
-      const additionalColumns: GridColumn[] = [
-        ...headers,
-        ...lineItemGroups.filter((group) => !rowGroup.find((rowG) => rowG.groupId === group.groupId)),
-      ].map((col: string | ILineItemGroup) => {
-        const isColString = typeof col === 'string';
-        const key = isColString ? col.toLowerCase() : col.groupId;
-        const header = isColString ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
 
-        return {
-          title: header,
-          key: key,
-        };
-      });
+      const subtotalRow: GridRowData = { division: `${indent}합계`, show: false, depth: indentLevel };
+      const subtotalEntries = Object.entries(subtotal);
 
-      console.log({ valueColumns });
-
-      valueColumns.push(...additionalColumns);
-
-      columns.push(...valueColumns);
-    }
-
-    const groupedRowData: GroupedData = groupByHierarchical(
-      lineItems,
-      rowGroup.map(({ groupId }) => groupId),
-    );
-
-    const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns });
-
-    if (showRowsTotal) {
-      const totalRow: GridRowData = { division: 'Total', total: true };
-      for (const { key } of valueColumns) {
-        totalRow[key] = rows.reduce((sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])), 0);
+      if (subtotalEntries.length) {
+        Object.entries(subtotal).forEach(([key, value]) => {
+          subtotalRow[key] = value;
+        });
+        result.push(subtotalRow);
       }
-      rows.push(totalRow);
-    }
 
-    const showSubtotalGroups = rowGroup.filter((group) => group.showTotal === true);
+      return result;
+    },
+    [],
+  );
 
-    for (const group of showSubtotalGroups) {
-      for (const row of rows) {
-        if (row.depth === group.level && row.show !== undefined && row.show === false) {
-          row.show = true;
+  const getOnlyRowGroupGridData = useCallback(
+    ({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal }: IGetOnlyRowGroupGridData) => {
+      const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
+      const columns: GridColumn[] = [
+        {
+          title: firstRowName,
+          key: 'division',
+        },
+      ];
+
+      const valueColumns: GridColumn[] = [];
+
+      const firstItem = lineItems[0];
+      if (firstItem.base.length >= 2 && firstItem.value === undefined) {
+        const baseColumnGroups: GridColumn[] = lineItems[0].base.map((base) => {
+          return {
+            key: base,
+            title: base,
+            children: [],
+          };
+        });
+
+        for (const header of headers) {
+          const headerArr = header.split('_');
+          const column = headerArr[0];
+          const group = headerArr[1];
+          const findGroupIndex = baseColumnGroups.findIndex((g) => g.key === group);
+
+          if (findGroupIndex > -1) {
+            baseColumnGroups[findGroupIndex].children?.push({
+              title: column,
+              key: header,
+            });
+          }
+        }
+        valueColumns.push(...baseColumnGroups);
+        columns.push(...baseColumnGroups);
+      } else {
+        const additionalColumns: GridColumn[] = [
+          ...headers,
+          ...lineItemGroups.filter((group) => !rowGroup.find((rowG) => rowG.groupId === group.groupId)),
+        ].map((col: string | ILineItemGroup) => {
+          const isColString = typeof col === 'string';
+          const key = isColString ? col.toLowerCase() : col.groupId;
+          const header = isColString ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+
+          return {
+            title: header,
+            key: key,
+          };
+        });
+
+        valueColumns.push(...additionalColumns);
+        columns.push(...valueColumns);
+      }
+
+      const groupedRowData: GroupedData = groupByHierarchical(
+        lineItems,
+        rowGroup.map(({ groupId }) => groupId),
+      );
+
+      const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns });
+
+      if (showRowsTotal) {
+        const totalRow: GridRowData = { division: 'Total', total: true };
+        for (const { key } of valueColumns) {
+          totalRow[key] = rows.reduce((sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])), 0);
+        }
+        rows.push(totalRow);
+      }
+
+      const showSubtotalGroups = rowGroup.filter((group) => group.showTotal === true);
+
+      for (const group of showSubtotalGroups) {
+        for (const row of rows) {
+          if (row.depth === group.level && row.show !== undefined && row.show === false) {
+            row.show = true;
+          }
         }
       }
-    }
 
-    console.log({ columns, rows });
+      return {
+        columns,
+        rows,
+      };
+    },
+    [extractRowsWithIndent],
+  );
 
-    return {
-      columns,
-      rows,
-    };
-  };
-
-  const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
+  const getBasicGridData = useCallback(({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
 
     const firstItem = lineItems[0];
@@ -151,11 +229,24 @@ export const useCreateTable = () => {
         };
       });
 
+      columns.push(
+        ...lineItemGroups.map((col: ILineItemGroup) => {
+          const key = col.groupId;
+          const title = col.name;
+
+          return {
+            title,
+            key,
+          };
+        }),
+      );
+
       for (const header of headers) {
         const headerArr = header.split('_');
         const column = headerArr[0];
         const group = headerArr[1];
         const findGroupIndex = columns.findIndex((g) => g.key === group);
+
         if (findGroupIndex > -1) {
           columns[findGroupIndex].children?.push({
             title: column,
@@ -172,15 +263,17 @@ export const useCreateTable = () => {
           if (col.children && col.children.length) {
             for (const child of col.children) {
               const key = child.key;
-              if (key) {
-                data[key] = item[key];
-              }
+              data[key] = item[key];
             }
+          }
+
+          const key = col.key;
+          if (item[key]) {
+            data[key] = item[key];
           }
         }
         rows.push(data);
       }
-      console.log({ columns, rows });
       return {
         columns,
         rows,
@@ -215,214 +308,140 @@ export const useCreateTable = () => {
         rows,
       };
     }
-  };
+  }, []);
 
-  const getPivotGridData = ({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal }: IGetPivotGridData) => {
-    // console.log({ colGroup, rowGroup });
-    // 행과 열 그룹별로 컬럼과 행을 구성
+  const getPivotGridData = useCallback(
+    ({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal }: IGetPivotGridData) => {
+      // console.log({ colGroup, rowGroup });
+      // 행과 열 그룹별로 컬럼과 행을 구성
 
-    const groupedColumnData: GroupedData = groupByHierarchical(
-      lineItems,
-      colGroup.map(({ groupId }) => groupId),
-    );
+      const groupedColumnData: GroupedData = groupByHierarchical(
+        lineItems,
+        colGroup.map(({ groupId }) => groupId),
+      );
 
-    const groupedRowData: GroupedData = groupByHierarchical(
-      lineItems,
-      rowGroup.map(({ groupId }) => groupId),
-    );
-    // console.log({ groupedColumnData });
+      const groupedRowData: GroupedData = groupByHierarchical(
+        lineItems,
+        rowGroup.map(({ groupId }) => groupId),
+      );
+      // console.log({ groupedColumnData });
 
-    const { columns, fieldValuesMap, total } = transformToGridColumnsData(groupedColumnData);
-    const fields = Object.keys(fieldValuesMap);
+      const { columns, fieldValuesMap, total } = transformToGridColumnsData(groupedColumnData);
+      const fields = Object.keys(fieldValuesMap);
 
-    //열 그룹 소계 표시 여부 확인 및 계산 로직
-    const showSubtotalGroups = colGroup.filter((group) => group.showTotal === true);
-    const subtotals = calculateColGroupSubtotals(groupedColumnData);
+      //열 그룹 소계 표시 여부 확인 및 계산 로직
+      const showSubtotalGroups = colGroup.filter((group) => group.showTotal === true);
+      const subtotals = calculateColGroupSubtotals(groupedColumnData);
 
-    if (showSubtotalGroups.length) {
-      const hasDuplicateKeys = checkSubgroupKeys(groupedColumnData);
+      if (showSubtotalGroups.length) {
+        const hasDuplicateKeys = checkSubgroupKeys(groupedColumnData);
 
-      if (hasDuplicateKeys) {
-        // 하위 필드가 서로 중복되면
+        if (hasDuplicateKeys) {
+          // 하위 필드가 서로 중복되면
 
-        const minGroupLevel = Math.min(...showSubtotalGroups.map((g) => g.level));
-        const minGroup = showSubtotalGroups.find((group) => group.level === minGroupLevel);
+          const minGroupLevel = Math.min(...showSubtotalGroups.map((g) => g.level));
+          const minGroup = showSubtotalGroups.find((group) => group.level === minGroupLevel);
 
-        if (minGroup) {
-          const { groupValues } = getGroupValuesAndCodes(lineItems, minGroup.groupId);
-          // console.log({ subtotals, groupValues });
+          if (minGroup) {
+            const { groupValues } = getGroupValuesAndCodes(lineItems, minGroup.groupId);
+            // console.log({ subtotals, groupValues });
 
-          const subtotalKeys = Object.keys(subtotals);
-          if (areStringArraysEqual(subtotalKeys, groupValues as string[])) {
-            columns.push({
-              key: 'subtotal',
-              title: '합계',
-              children: subtotalKeys.map((key) => {
-                const accessorKey = `${key}_subtotal`;
-                fields.push(accessorKey);
-                return {
-                  title: key,
-                  key: accessorKey,
-                };
-              }),
-            });
-          }
-        }
-      } else {
-        //TODO 중복안되면 그룹내 합계 처리
-      }
-    }
-
-    const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
-
-    columns.unshift({
-      key: 'division',
-      title: firstRowName,
-    });
-
-    if (showColsTotal) {
-      columns.push({ title: '총계', key: 'total' });
-      fields.push('total');
-    }
-
-    // console.log({ fieldValuesMap });
-
-    const { groupValues, lineItemCodesMap } = getGroupValuesAndCodes(lineItems, rowGroup[0].groupId);
-
-    // console.log({ groupValues, lineItemCodesMap });
-
-    const rows: GridRowData[] = Array.from({ length: groupValues.length }, (_, i) => {
-      const mapKey = groupValues[i] as unknown as KeyTypeFromItemValue;
-      const codes = lineItemCodesMap[mapKey];
-      const row: GridRowData = { division: groupValues[i] };
-
-      for (const field of fields) {
-        const fieldValue = fieldValuesMap[field]?.find((v) => codes.includes(v.code));
-        if (typeof field === 'string' && fieldValue) {
-          row[field] = fieldValue.value;
-        } else if (field === 'total') {
-          const totalKey = groupValues[i] as unknown as KeyTypeFromItemValue;
-          row[field] = (groupedRowData[totalKey] as ILineItem[]).reduce(
-            (sum, item) => sum + Number(item.value ?? 0),
-            0,
-          );
-        } else if (field.includes('subtotal')) {
-          for (const subtotal in subtotals) {
-            const key = field.split('_')[0];
-            if (key === subtotal) {
-              row[field] = (subtotals[subtotal] as Subtotal[])[i].subtotal;
-            }
-          }
-        }
-      }
-
-      return row;
-    });
-
-    if (showRowsTotal) {
-      const row: GridRowData = { division: '총계' };
-      for (const field of fields) {
-        const items = fieldValuesMap[field];
-        if (items) {
-          const sum = fieldValuesMap[field].reduce((sum, item) => sum + Number(item.value ?? 0), 0);
-          row[field] = sum;
-        } else if (field.includes('subtotal')) {
-          for (const subtotal in subtotals) {
-            const key = field.split('_')[0];
-            if (key === subtotal) {
-              row[field] = (subtotals[subtotal] as Subtotal[]).reduce((sum, v) => sum + v.subtotal, 0);
+            const subtotalKeys = Object.keys(subtotals);
+            if (areStringArraysEqual(subtotalKeys, groupValues as string[])) {
+              columns.push({
+                key: 'subtotal',
+                title: '합계',
+                children: subtotalKeys.map((key) => {
+                  const accessorKey = `${key}_subtotal`;
+                  fields.push(accessorKey);
+                  return {
+                    title: key,
+                    key: accessorKey,
+                  };
+                }),
+              });
             }
           }
         } else {
-          row.total = total;
+          //TODO 중복안되면 그룹내 합계 처리
         }
       }
-      rows.push(row);
-    }
 
-    console.log({ columns, rows });
-    return {
-      columns,
-      rows,
-    };
-  };
+      const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
 
-  const extractRowsWithIndent = ({
-    groupedData,
-    indentLevel = 0,
-    result = [],
-    valueColumns,
-  }: {
-    groupedData: GroupedData | ILineItem[];
-    indentLevel?: number;
-    result?: GridRowData[];
-    valueColumns: GridColumn[];
-  }): GridRowData[] => {
-    if (Array.isArray(groupedData)) return result;
+      columns.unshift({
+        key: 'division',
+        title: firstRowName,
+      });
 
-    const indent = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'.repeat(indentLevel);
+      if (showColsTotal) {
+        columns.push({ title: '총계', key: 'total' });
+        fields.push('total');
+      }
 
-    const subtotal: Record<string, number> = {};
-    for (const field in groupedData) {
-      const division = `${indent}${field}`;
+      // console.log({ fieldValuesMap });
 
-      const row: GridRowData = { division };
-      if (Array.isArray(groupedData[field]) && groupedData[field].length) {
-        for (const col of valueColumns) {
-          if (col.children && col.children.length) {
-            for (const child of col.children) {
-              const key = child.key;
-              const value = (groupedData[field] as ILineItem[]).reduce(
-                (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
-                0,
-              );
-              row[key] = value;
-              if (subtotal[key] === undefined) {
-                subtotal[key] = value;
-              } else {
-                subtotal[key] += value;
-              }
-            }
-          } else {
-            const key = col.key;
-            const value = (groupedData[field] as ILineItem[]).reduce(
-              (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
+      const { groupValues, lineItemCodesMap } = getGroupValuesAndCodes(lineItems, rowGroup[0].groupId);
+
+      // console.log({ groupValues, lineItemCodesMap });
+
+      const rows: GridRowData[] = Array.from({ length: groupValues.length }, (_, i) => {
+        const mapKey = groupValues[i] as unknown as KeyTypeFromItemValue;
+        const codes = lineItemCodesMap[mapKey];
+        const row: GridRowData = { division: groupValues[i] };
+
+        for (const field of fields) {
+          const fieldValue = fieldValuesMap[field]?.find((v) => codes.includes(v.code));
+          if (typeof field === 'string' && fieldValue) {
+            row[field] = fieldValue.value;
+          } else if (field === 'total') {
+            const totalKey = groupValues[i] as unknown as KeyTypeFromItemValue;
+            row[field] = (groupedRowData[totalKey] as ILineItem[]).reduce(
+              (sum, item) => sum + Number(item.value ?? 0),
               0,
             );
-            row[key] = value;
-            if (subtotal[key] === undefined) {
-              subtotal[key] = value;
-            } else {
-              subtotal[key] += value;
+          } else if (field.includes('subtotal')) {
+            for (const subtotal in subtotals) {
+              const key = field.split('_')[0];
+              if (key === subtotal) {
+                row[field] = (subtotals[subtotal] as Subtotal[])[i].subtotal;
+              }
             }
           }
         }
-      }
 
-      result.push(row);
-
-      if (typeof groupedData[field] === 'object' && groupedData[field] !== null && !Array.isArray(groupedData[field])) {
-        extractRowsWithIndent({
-          groupedData: groupedData[field],
-          indentLevel: indentLevel + 1,
-          result,
-          valueColumns,
-        });
-      }
-    }
-
-    const subtotalRow: GridRowData = { division: `${indent}합계`, show: false, depth: indentLevel };
-    const subtotalEntries = Object.entries(subtotal);
-
-    if (subtotalEntries.length) {
-      Object.entries(subtotal).forEach(([key, value]) => {
-        subtotalRow[key] = value;
+        return row;
       });
-      result.push(subtotalRow);
-    }
 
-    return result;
-  };
+      if (showRowsTotal) {
+        const row: GridRowData = { division: '총계' };
+        for (const field of fields) {
+          const items = fieldValuesMap[field];
+          if (items) {
+            const sum = fieldValuesMap[field].reduce((sum, item) => sum + Number(item.value ?? 0), 0);
+            row[field] = sum;
+          } else if (field.includes('subtotal')) {
+            for (const subtotal in subtotals) {
+              const key = field.split('_')[0];
+              if (key === subtotal) {
+                row[field] = (subtotals[subtotal] as Subtotal[]).reduce((sum, v) => sum + v.subtotal, 0);
+              }
+            }
+          } else {
+            row.total = total;
+          }
+        }
+        rows.push(row);
+      }
+
+      console.log({ columns, rows });
+      return {
+        columns,
+        rows,
+      };
+    },
+    [],
+  );
 
   //주어진 그룹의 유니크한 값과 그 값에 해당하는 아이템 코드 구하기
   const getGroupValuesAndCodes = (lineItems: ILineItem[], groupId: string) => {
