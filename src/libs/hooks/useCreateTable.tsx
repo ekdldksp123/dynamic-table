@@ -57,19 +57,53 @@ export const useCreateTable = () => {
       },
     ];
 
-    const valueColumns: GridColumn[] = [
-      ...headers,
-      ...lineItemGroups.filter((group) => !rowGroup.find((rowG) => rowG.groupId === group.groupId)),
-    ].map((col: string | ILineItemGroup) => {
-      const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
-      const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+    const valueColumns: GridColumn[] = [];
 
-      return {
-        title: header,
-        key: key,
-      };
-    });
-    columns.push(...valueColumns);
+    const firstItem = lineItems[0];
+    if (firstItem.base.length >= 2 && firstItem.value === undefined) {
+      const baseColumnGroups: GridColumn[] = lineItems[0].base.map((base) => {
+        return {
+          key: base,
+          title: base,
+          children: [],
+        };
+      });
+
+      for (const header of headers) {
+        const headerArr = header.split('_');
+        const column = headerArr[0];
+        const group = headerArr[1];
+        const findGroupIndex = baseColumnGroups.findIndex((g) => g.key === group);
+        if (findGroupIndex > -1) {
+          baseColumnGroups[findGroupIndex].children?.push({
+            title: column,
+            key: header,
+          });
+        }
+      }
+      valueColumns.push(...baseColumnGroups);
+      columns.push(...baseColumnGroups);
+    } else {
+      const additionalColumns: GridColumn[] = [
+        ...headers,
+        ...lineItemGroups.filter((group) => !rowGroup.find((rowG) => rowG.groupId === group.groupId)),
+      ].map((col: string | ILineItemGroup) => {
+        const isColString = typeof col === 'string';
+        const key = isColString ? col.toLowerCase() : col.groupId;
+        const header = isColString ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+
+        return {
+          title: header,
+          key: key,
+        };
+      });
+
+      console.log({ valueColumns });
+
+      valueColumns.push(...additionalColumns);
+
+      columns.push(...valueColumns);
+    }
 
     const groupedRowData: GroupedData = groupByHierarchical(
       lineItems,
@@ -96,6 +130,8 @@ export const useCreateTable = () => {
       }
     }
 
+    console.log({ columns, rows });
+
     return {
       columns,
       rows,
@@ -105,35 +141,80 @@ export const useCreateTable = () => {
   const getBasicGridData = ({ headers, lineItems, lineItemGroups }: IGetBasicGridData) => {
     //lineItems 그대로 뿌려준다
 
-    const columns: GridColumn[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
-      const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
-      const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+    const firstItem = lineItems[0];
+    if (firstItem.base.length >= 2 && firstItem.value === undefined) {
+      const columns: GridColumn[] = lineItems[0].base.map((base) => {
+        return {
+          key: base,
+          title: base,
+          children: [],
+        };
+      });
 
-      return {
-        title: header,
-        key: key,
-      };
-    });
-
-    const rows = [];
-    for (const item of lineItems) {
-      const data: Record<string, ItemValueType> = {};
-      for (const col of columns) {
-        const key = col.key;
-        if (key) {
-          data[key] = item[key];
+      for (const header of headers) {
+        const headerArr = header.split('_');
+        const column = headerArr[0];
+        const group = headerArr[1];
+        const findGroupIndex = columns.findIndex((g) => g.key === group);
+        if (findGroupIndex > -1) {
+          columns[findGroupIndex].children?.push({
+            title: column,
+            key: header,
+          });
         }
       }
-      data.value = item.value;
-      data.base = item.base;
-      rows.push(data);
-    }
-    // console.log({ columns, rows });
 
-    return {
-      columns,
-      rows,
-    };
+      const rows = [];
+
+      for (const item of lineItems) {
+        const data: Record<string, ItemValueType> = {};
+        for (const col of columns) {
+          if (col.children && col.children.length) {
+            for (const child of col.children) {
+              const key = child.key;
+              if (key) {
+                data[key] = item[key];
+              }
+            }
+          }
+        }
+        rows.push(data);
+      }
+      console.log({ columns, rows });
+      return {
+        columns,
+        rows,
+      };
+    } else {
+      const columns: GridColumn[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
+        const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
+        const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+
+        return {
+          title: header,
+          key: key,
+        };
+      });
+
+      const rows = [];
+      for (const item of lineItems) {
+        const data: Record<string, ItemValueType> = {};
+        for (const col of columns) {
+          const key = col.key;
+          if (key) {
+            data[key] = item[key];
+          }
+        }
+        data.value = item.value;
+        data.base = item.base;
+        rows.push(data);
+      }
+      console.log({ columns, rows });
+      return {
+        columns,
+        rows,
+      };
+    }
   };
 
   const getPivotGridData = ({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal }: IGetPivotGridData) => {
@@ -259,7 +340,7 @@ export const useCreateTable = () => {
       rows.push(row);
     }
 
-    // console.log({ columns, rows });
+    console.log({ columns, rows });
     return {
       columns,
       rows,
@@ -288,15 +369,32 @@ export const useCreateTable = () => {
       const row: GridRowData = { division };
       if (Array.isArray(groupedData[field]) && groupedData[field].length) {
         for (const col of valueColumns) {
-          const value = (groupedData[field] as ILineItem[]).reduce(
-            (sum, cur) => sum + (isNaN(Number(cur[col.key])) ? 0 : Number(cur[col.key])),
-            0,
-          );
-          row[col.key] = value;
-          if (subtotal[col.key] === undefined) {
-            subtotal[col.key] = value;
+          if (col.children && col.children.length) {
+            for (const child of col.children) {
+              const key = child.key;
+              const value = (groupedData[field] as ILineItem[]).reduce(
+                (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
+                0,
+              );
+              row[key] = value;
+              if (subtotal[key] === undefined) {
+                subtotal[key] = value;
+              } else {
+                subtotal[key] += value;
+              }
+            }
           } else {
-            subtotal[col.key] += value;
+            const key = col.key;
+            const value = (groupedData[field] as ILineItem[]).reduce(
+              (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
+              0,
+            );
+            row[key] = value;
+            if (subtotal[key] === undefined) {
+              subtotal[key] = value;
+            } else {
+              subtotal[key] += value;
+            }
           }
         }
       }

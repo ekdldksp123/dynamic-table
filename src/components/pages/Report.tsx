@@ -260,6 +260,35 @@ export const Report: FC<ReportProps> = ({ route }) => {
           }),
         );
         break;
+      case '주석 28_01':
+        setLineItems((prev) =>
+          prev.map((item) => {
+            if (lineItemGroups.length === 0) {
+              if (item.code === '52310') {
+                item[groupId] = '급여';
+              } else if (item.code === '52330') {
+                item[groupId] = '복리후생비';
+              } else if (item.code === '52320') {
+                item[groupId] = '특별상여금';
+              } else if (item.code === '52550') {
+                item[groupId] = '세금과공과';
+              } else if (item.code === '52530' || item.code === '55230' || item.code === '56480') {
+                item[groupId] = '지급수수료';
+              } else if (item.code === '52520') {
+                item[groupId] = '전산비';
+              } else if (item.code === '52340') {
+                item[groupId] = '퇴직급여';
+              } else if (item.code === '52560' || item.code === '56100') {
+                item[groupId] = '감가상각비';
+              } else {
+                item[groupId] = '기타';
+              }
+            }
+
+            return item;
+          }),
+        );
+        break;
       default:
         setLineItems((prev) =>
           prev.map((item) => {
@@ -310,11 +339,11 @@ export const Report: FC<ReportProps> = ({ route }) => {
         <p className='font-bold text-lg'>Report Name</p>
         <h2>{report?.name}</h2>
         <section className='flex gap-3 w-[100%] h-[550px] overflow-y-auto'>
-          <section className='w-[70%] overflow-x-auto'>
+          <section className='w-[80%] overflow-x-auto'>
             <p className='mt-5 text-lg font-bold mb-1'>Field List</p>
             <div className='overflow-x-auto'>
-              <table className='whitespace-nowrap'>
-                <thead>
+              <table className='w-[100%] whitespace-nowrap'>
+                <thead className='w-[100%]'>
                   <tr>
                     {fieldHeaders.map((header) => (
                       <th key={`th-${header.label}`} className='bg-gray-200 h-[30px]'>
@@ -326,7 +355,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                         <div className='w-[100%] relative flex items-center gap-2'>
                           <Input
                             type='text'
-                            className='w-[85%]'
+                            className='w-[150px]'
                             placeholder={`Group ${lineItemGroups.length}`}
                             value={group.name}
                             onChange={(e) => {
@@ -356,20 +385,19 @@ export const Report: FC<ReportProps> = ({ route }) => {
                     lineItems.map((item, index) => {
                       return (
                         <tr key={`item-${index}`} className='border-b border-b-double border-b-neutral-200'>
-                          {fieldHeaders.map((header) => (
-                            <td className='px-5'>{item[header.value]}</td>
-                          ))}
-                          {/* <td className='px-5'>{item.code}</td>
-                          <td className='px-5 text-center border-r border-r-double border-r-neutral-200'>
-                            {item.name}
-                          </td> */}
+                          {fieldHeaders.map((header) => {
+                            const value = item[header.value];
+                            return (
+                              <td className='px-5'>{typeof value === 'number' ? value.toLocaleString() : value}</td>
+                            );
+                          })}
                           {lineItemGroups.map(({ groupId }) => {
                             const value = item[groupId] as unknown as Exclude<ItemValueType, boolean>;
                             return (
                               <td key={`${item.code}:${groupId}`}>
                                 <Input
                                   value={value || ''}
-                                  className='w-[85%]'
+                                  className='w-[150px]'
                                   onChange={(e) => {
                                     setLineItems((prev) => {
                                       return prev.map((item, i) => {
@@ -394,7 +422,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
             </div>
           </section>
 
-          <section className='w-[30%]'>
+          <section className='w-[20%]'>
             <p className='mt-5 text-lg font-bold mb-1'>Edit Table Layout</p>
             <div className='grid gap-3'>
               <DraggableCardList
@@ -481,7 +509,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
           <p className='text-lg font-bold text-center'>{title}</p>
           <div className='absolute right-0 flex items-center gap-2'>
             <Select onValueChange={setTarget} value={target}>
-              <SelectTrigger className='w-[180px]'>
+              <SelectTrigger className='w-[150px]'>
                 <SelectValue placeholder={title === 'Row' ? '행을 선택하세요' : '열을 선택하세요'} />
               </SelectTrigger>
               <SelectContent>
