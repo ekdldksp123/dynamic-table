@@ -38,27 +38,26 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
+  const [showBaseTotal, setShowBaseTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
   const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
 
-  const fieldHeaders = useMemo(
-    () =>
-      lineItems.length
-        ? Object.keys(lineItems[0])
-            .filter(
-              (key) =>
-                key !== 'isCustom' &&
-                key !== 'value' &&
-                key !== 'base' &&
-                key.length < 20 &&
-                !EXCLUDE_VALUES.includes(key),
-            )
-            .map((key) => {
-              return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`, value: key };
-            })
-        : [],
-    [lineItems],
-  );
+  const { fieldHeaders, numberOfBases } = useMemo(() => {
+    if (lineItems.length) {
+      const fieldHeaders = Object.keys(lineItems[0])
+        .filter(
+          (key) =>
+            key !== 'isCustom' && key !== 'value' && key !== 'base' && key.length < 20 && !EXCLUDE_VALUES.includes(key),
+        )
+        .map((key) => {
+          return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`, value: key };
+        });
+      return { fieldHeaders, numberOfBases: lineItems[0].base.length };
+    } else {
+      return { fieldHeaders: [], numberOfBases: 0 };
+    }
+  }, [lineItems]);
+
   const headers = useMemo(
     () =>
       Object.keys(report.itemsDisplayInfo)
@@ -433,6 +432,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 children={rowGroup.map((col, i) => renderRow(col, i))}
                 showTotal={showRowsTotal}
                 setShowTotal={setShowRowsTotal}
+                numberOfBases={numberOfBases}
               />
               <DraggableCardList
                 title='Column'
@@ -442,6 +442,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 children={colGroup.map((col, i) => renderColumn(col, i))}
                 showTotal={showColsTotal}
                 setShowTotal={setShowColsTotal}
+                numberOfBases={numberOfBases}
+                showBaseTotal={showBaseTotal}
+                setShowBaseTotal={setShowBaseTotal}
               />
             </div>
           </section>
@@ -461,6 +464,9 @@ interface DraggableCardListProps {
   customFields: ILineItem[];
   showTotal: CheckedState;
   setShowTotal: (state: CheckedState) => void;
+  showBaseTotal?: CheckedState;
+  setShowBaseTotal?: (state: CheckedState) => void;
+  numberOfBases: number;
 }
 
 const DraggableCardList: FC<DraggableCardListProps> = ({
@@ -471,6 +477,9 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
   setGroups,
   showTotal,
   setShowTotal,
+  numberOfBases,
+  showBaseTotal,
+  setShowBaseTotal,
 }) => {
   const [target, setTarget] = useState<string>();
   const onAddHandler = useCallback(() => {
@@ -540,15 +549,26 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
             <VscDiffAdded className='cursor-pointer' onClick={onAddHandler} />
           </div>
         </div>
-        <div className='flex flex-col gap-3'>
+        <div className='flex-col gap-3'>
           {children}
-          <CheckboxGroup
-            id={title === 'Row' ? 'rowTotal' : 'columnTotal'}
-            label='Show Total'
-            // disabled={!children.length}
-            checked={showTotal}
-            onCheckedChange={setShowTotal}
-          />
+          <div className='flex gap-8'>
+            <CheckboxGroup
+              id={title === 'Row' ? 'rowTotal' : 'columnTotal'}
+              label='Show Total'
+              disabled={!children.length}
+              checked={showTotal}
+              onCheckedChange={setShowTotal}
+            />
+            {title === 'Column' && (
+              <CheckboxGroup
+                id='baseTotal'
+                label='Show Base Total'
+                disabled={numberOfBases <= 1}
+                checked={showBaseTotal}
+                onCheckedChange={setShowBaseTotal}
+              />
+            )}
+          </div>
         </div>
       </div>
     </DndProvider>
