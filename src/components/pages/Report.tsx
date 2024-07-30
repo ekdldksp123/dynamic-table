@@ -25,7 +25,7 @@ import { CheckboxGroup } from '../ui/checkbox';
 import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { CustomGrid } from '../ui/custom-grid';
 
-const field_headers = ['Code', 'Name'];
+const EXCLUDE_VALUES = ['전기', '전기말'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReport = route.useLoaderData();
@@ -40,6 +40,25 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
   const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
+
+  const fieldHeaders = useMemo(
+    () =>
+      lineItems.length
+        ? Object.keys(lineItems[0])
+            .filter(
+              (key) =>
+                key !== 'isCustom' &&
+                key !== 'value' &&
+                key !== 'base' &&
+                key.length < 20 &&
+                !EXCLUDE_VALUES.includes(key),
+            )
+            .map((key) => {
+              return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`, value: key };
+            })
+        : [],
+    [lineItems],
+  );
   const headers = useMemo(
     () =>
       Object.keys(report.itemsDisplayInfo)
@@ -297,9 +316,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
               <table className='whitespace-nowrap'>
                 <thead>
                   <tr>
-                    {field_headers.map((header) => (
-                      <th key={header} className='bg-gray-200 h-[30px]'>
-                        {header}
+                    {fieldHeaders.map((header) => (
+                      <th key={`th-${header.label}`} className='bg-gray-200 h-[30px]'>
+                        {header.label}
                       </th>
                     ))}
                     {lineItemGroups.map((group, index) => (
@@ -337,10 +356,13 @@ export const Report: FC<ReportProps> = ({ route }) => {
                     lineItems.map((item, index) => {
                       return (
                         <tr key={`item-${index}`} className='border-b border-b-double border-b-neutral-200'>
-                          <td className='px-5'>{item.code}</td>
+                          {fieldHeaders.map((header) => (
+                            <td className='px-5'>{item[header.value]}</td>
+                          ))}
+                          {/* <td className='px-5'>{item.code}</td>
                           <td className='px-5 text-center border-r border-r-double border-r-neutral-200'>
                             {item.name}
-                          </td>
+                          </td> */}
                           {lineItemGroups.map(({ groupId }) => {
                             const value = item[groupId] as unknown as Exclude<ItemValueType, boolean>;
                             return (
