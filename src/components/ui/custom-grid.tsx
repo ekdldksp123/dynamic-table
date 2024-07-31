@@ -48,14 +48,20 @@ export const CustomGrid: FC<CustomGridProps> = ({ columns, rows, numOfRowGroups 
               <tr key={rowIndex} className='border-t'>
                 {flattenColumns(columns).map((column, i) => {
                   const value = row[column.key] === 0 ? '-' : row[column.key];
+                  const division = (row.division as string)?.trim();
+
                   return (
                     <td
                       key={column.key}
                       className={classNames(
                         'px-4 py-2 bg-[#EDF0FE] border-r border-b font-normal border-white',
-                        i === 0 && i !== columns.length - 1 && numOfRowGroups >= 1
-                          ? '!bg-[#DCE2F7] font-semibold'
-                          : 'font-medium',
+                        value?.toString().trim() === '총계' || value?.toString().trim() === '합계'
+                          ? '!bg-[#C1C4CF]'
+                          : i === 0 && i !== columns.length - 1 && numOfRowGroups >= 1
+                            ? '!bg-[#DCE2F7] font-semibold'
+                            : division === '총계' || division === '합계'
+                              ? '!bg-[#C1C4CF]'
+                              : 'font-medium',
                       )}
                     >
                       {typeof value === 'number' ? value.toLocaleString() : value}
