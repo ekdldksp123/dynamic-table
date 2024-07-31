@@ -52,7 +52,7 @@ export const CustomGrid: FC<CustomGridProps> = ({ columns, rows, numOfRowGroups 
                     <td
                       key={column.key}
                       className={classNames(
-                        'px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white',
+                        'px-4 py-2 bg-[#EDF0FE] border-r border-b font-normal border-white',
                         i === 0 && i !== columns.length - 1 && numOfRowGroups >= 1
                           ? '!bg-[#DCE2F7] font-semibold'
                           : 'font-medium',
