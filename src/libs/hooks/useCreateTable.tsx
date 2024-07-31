@@ -220,9 +220,12 @@ export const useCreateTable = () => {
 
       const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns, showBaseTotal });
 
+      // console.log({ rows });
+
       if (showRowsTotal) {
         for (const row of rows) {
           if (row.division === '총계') {
+            console.log({ showRowsTotal, row });
             row.show = true;
 
             for (const { children } of valueColumns) {
@@ -238,14 +241,33 @@ export const useCreateTable = () => {
                     row[key] = total;
                   }
                 });
+              } else {
+                //TODO
               }
             }
           }
         }
+        const findRowsTotal = rows.find((row) => row.division === '총계');
+        if (!findRowsTotal) {
+          const subtotals = rows.filter((row) => row.division?.toString().trim() === '합계');
+          const rowsTotal = subtotals.reduce(
+            (acc, cur) => {
+              for (const key in cur) {
+                // 문자열 값을 제외한 키만 합산합니다.
+                const value = cur[key];
+                if (typeof value === 'number') {
+                  acc[key] = Number(acc[key] || 0) + value;
+                }
+              }
+              return acc;
+            },
+            { division: '총계' },
+          );
+          rows.push(rowsTotal);
+        }
       }
 
       const showSubtotalGroups = rowGroup.filter((group) => group.showTotal === true);
-
       for (const group of showSubtotalGroups) {
         for (const row of rows) {
           if (row.depth === group.level && row.show !== undefined && row.show === false) {
@@ -348,7 +370,6 @@ export const useCreateTable = () => {
         data.base = item.base;
         rows.push(data);
       }
-      console.log({ columns, rows });
       return {
         columns,
         rows,

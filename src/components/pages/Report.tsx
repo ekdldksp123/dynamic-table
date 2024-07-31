@@ -389,7 +389,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                   {lineItems.length &&
                     lineItems.map((item, index) => {
                       return (
-                        <tr key={`item-${index}`} className='border-b border-b-double border-b-neutral-200'>
+                        <tr key={item.code} className='border-b border-b-double border-b-neutral-200'>
                           {fieldHeaders.map((header) => {
                             const value = item[header.value];
                             return (
