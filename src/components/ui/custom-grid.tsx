@@ -23,7 +23,10 @@ export const CustomGrid: FC<CustomGridProps> = ({ columns, rows, numOfRowGroups 
             key={col.key}
             colSpan={getColSpan(col)}
             rowSpan={!col.children ? maxDepth - depth : 1}
-            className='px-4 py-2 border-r border-b font-semibold border-white'
+            className={classNames(
+              'px-4 py-2 border-r border-b font-semibold border-white',
+              depth !== 0 ? 'bg-[#B0BDEA]' : '',
+            )}
           >
             {col.title}
           </th>
