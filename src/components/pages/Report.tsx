@@ -449,8 +449,11 @@ export const Report: FC<ReportProps> = ({ route }) => {
             </div>
           </section>
         </section>
-        <p className='mt-5 text-lg font-bold'>Preview</p>
-        <CustomGrid columns={columns} rows={rows} />
+        <div className='w-[100%] h-[50px] relative mb-2'>
+          <p className='mt-5 text-lg font-bold'>Preview</p>
+          <p className='absolute right-0 text-md font-medium'>Unit (1,000 won)</p>
+        </div>
+        <CustomGrid columns={columns} rows={rows} numOfRowGroups={rowGroup.length} />
       </div>
     </div>
   );

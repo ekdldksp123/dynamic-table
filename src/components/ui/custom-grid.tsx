@@ -6,8 +6,9 @@ import { FC, ReactNode, useCallback, useMemo } from 'react';
 interface CustomGridProps {
   columns: GridColumn[];
   rows: GridRowData[];
+  numOfRowGroups: number;
 }
-export const CustomGrid: FC<CustomGridProps> = ({ columns, rows }) => {
+export const CustomGrid: FC<CustomGridProps> = ({ columns, rows, numOfRowGroups }) => {
   const maxDepth = useMemo(() => getMaxDepth(columns), [columns]);
 
   const renderHeaders = useCallback((): React.ReactNode[] => {
@@ -45,17 +46,22 @@ export const CustomGrid: FC<CustomGridProps> = ({ columns, rows }) => {
             .filter((row) => row.show !== false)
             .map((row, rowIndex) => (
               <tr key={rowIndex} className='border-t'>
-                {flattenColumns(columns).map((column, i) => (
-                  <td
-                    key={column.key}
-                    className={classNames(
-                      'px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white',
-                      i === 0 && i !== columns.length - 1 ? '!bg-[#DCE2F7] font-semibold' : 'font-medium',
-                    )}
-                  >
-                    {row[column.key] === 0 ? '-' : row[column.key]}
-                  </td>
-                ))}
+                {flattenColumns(columns).map((column, i) => {
+                  const value = row[column.key] === 0 ? '-' : row[column.key];
+                  return (
+                    <td
+                      key={column.key}
+                      className={classNames(
+                        'px-4 py-2 !bg-[#EDF0FE] border-r border-b font-normal border-white',
+                        i === 0 && i !== columns.length - 1 && numOfRowGroups >= 1
+                          ? '!bg-[#DCE2F7] font-semibold'
+                          : 'font-medium',
+                      )}
+                    >
+                      {typeof value === 'number' ? value.toLocaleString() : value}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
         </tbody>
