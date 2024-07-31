@@ -42,7 +42,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
 
-  const { fieldHeaders, numberOfBases } = useMemo(() => {
+  const fieldHeaders = useMemo(() => {
     if (lineItems.length) {
       const fieldHeaders = Object.keys(lineItems[0])
         .filter(
@@ -52,9 +52,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
         .map((key) => {
           return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`, value: key };
         });
-      return { fieldHeaders, numberOfBases: lineItems[0].base.length };
+      return fieldHeaders;
     } else {
-      return { fieldHeaders: [], numberOfBases: 0 };
+      return [];
     }
   }, [lineItems]);
 
@@ -99,6 +99,11 @@ export const Report: FC<ReportProps> = ({ route }) => {
     getPivotGridData,
     showColsTotal,
   ]);
+
+  const disableShowBaseTotal = useMemo(
+    () => lineItems[0].base.length <= 1 || !columns[1].children,
+    [columns, lineItems],
+  );
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -433,7 +438,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 children={rowGroup.map((col, i) => renderRow(col, i))}
                 showTotal={showRowsTotal}
                 setShowTotal={setShowRowsTotal}
-                numberOfBases={numberOfBases}
               />
               <DraggableCardList
                 title='Column'
@@ -443,7 +447,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 children={colGroup.map((col, i) => renderColumn(col, i))}
                 showTotal={showColsTotal}
                 setShowTotal={setShowColsTotal}
-                numberOfBases={numberOfBases}
+                disableShowBaseTotal={disableShowBaseTotal}
                 showBaseTotal={showBaseTotal}
                 setShowBaseTotal={setShowBaseTotal}
               />
@@ -470,7 +474,7 @@ interface DraggableCardListProps {
   setShowTotal: (state: CheckedState) => void;
   showBaseTotal?: CheckedState;
   setShowBaseTotal?: (state: CheckedState) => void;
-  numberOfBases: number;
+  disableShowBaseTotal?: boolean;
 }
 
 const DraggableCardList: FC<DraggableCardListProps> = ({
@@ -481,7 +485,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
   setGroups,
   showTotal,
   setShowTotal,
-  numberOfBases,
+  disableShowBaseTotal,
   showBaseTotal,
   setShowBaseTotal,
 }) => {
@@ -553,7 +557,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
             <VscDiffAdded className='cursor-pointer' onClick={onAddHandler} />
           </div>
         </div>
-        <div className='flex-col gap-3'>
+        <div className='flex flex-col gap-3'>
           {children}
           <div className='flex gap-8'>
             <CheckboxGroup
@@ -567,7 +571,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
               <CheckboxGroup
                 id='baseTotal'
                 label='Show Base Total'
-                disabled={numberOfBases <= 1}
+                disabled={disableShowBaseTotal}
                 checked={showBaseTotal}
                 onCheckedChange={setShowBaseTotal}
               />

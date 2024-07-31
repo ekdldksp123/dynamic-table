@@ -126,7 +126,11 @@ export const useCreateTable = () => {
         }
       }
 
-      const subtotalRow: GridRowData = { division: `${indent}합계`, show: false, depth: indentLevel };
+      const subtotalRow: GridRowData = {
+        division: `${indent}${indentLevel === 0 ? '총계' : '합계'}`,
+        show: false,
+        depth: indentLevel,
+      };
       const subtotalEntries = Object.entries(subtotal);
 
       if (subtotalEntries.length) {
@@ -214,16 +218,30 @@ export const useCreateTable = () => {
         rowGroup.map(({ groupId }) => groupId),
       );
 
-      console.log({ valueColumns });
-
       const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns, showBaseTotal });
 
       if (showRowsTotal) {
-        const totalRow: GridRowData = { division: 'Total', total: true };
-        for (const { key } of valueColumns) {
-          totalRow[key] = rows.reduce((sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])), 0);
+        for (const row of rows) {
+          if (row.division === '총계') {
+            row.show = true;
+
+            for (const { children } of valueColumns) {
+              if (children && children.length) {
+                let total = 0;
+                children.forEach((col, index, arr) => {
+                  const key = col.key;
+
+                  if (index < arr.length - 1) {
+                    const value = Number(row[key]);
+                    total += isNaN(value) ? 0 : value;
+                  } else {
+                    row[key] = total;
+                  }
+                });
+              }
+            }
+          }
         }
-        rows.push(totalRow);
       }
 
       const showSubtotalGroups = rowGroup.filter((group) => group.showTotal === true);
