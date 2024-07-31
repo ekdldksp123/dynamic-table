@@ -34,6 +34,7 @@ interface IGetOnlyRowGroupGridData {
   lineItems: ILineItem[];
   lineItemGroups: ILineItemGroup[];
   showRowsTotal: CheckedState;
+  showBaseTotal: CheckedState;
 }
 
 type GridColumnsData = {
@@ -49,11 +50,13 @@ export const useCreateTable = () => {
       indentLevel = 0,
       result = [],
       valueColumns,
+      showBaseTotal,
     }: {
       groupedData: GroupedData | ILineItem[];
       indentLevel?: number;
       result?: GridRowData[];
       valueColumns: GridColumn[];
+      showBaseTotal: CheckedState;
     }): GridRowData[] => {
       if (Array.isArray(groupedData)) return result;
 
@@ -66,6 +69,7 @@ export const useCreateTable = () => {
         const row: GridRowData = { division };
         if (Array.isArray(groupedData[field]) && groupedData[field].length) {
           for (const col of valueColumns) {
+            let baseTotal = 0;
             if (col.children && col.children.length) {
               for (const child of col.children) {
                 const key = child.key;
@@ -73,7 +77,16 @@ export const useCreateTable = () => {
                   (sum, cur) => sum + (isNaN(Number(cur[key])) ? 0 : Number(cur[key])),
                   0,
                 );
-                row[key] = value;
+
+                if (value !== 0) {
+                  row[key] = value;
+                  if (showBaseTotal) {
+                    baseTotal += value;
+                  }
+                } else if (showBaseTotal) {
+                  row[key] = baseTotal;
+                }
+
                 if (subtotal[key] === undefined) {
                   subtotal[key] = value;
                 } else {
@@ -108,6 +121,7 @@ export const useCreateTable = () => {
             indentLevel: indentLevel + 1,
             result,
             valueColumns,
+            showBaseTotal,
           });
         }
       }
@@ -128,7 +142,7 @@ export const useCreateTable = () => {
   );
 
   const getOnlyRowGroupGridData = useCallback(
-    ({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal }: IGetOnlyRowGroupGridData) => {
+    ({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal, showBaseTotal }: IGetOnlyRowGroupGridData) => {
       const firstRowName = rowGroup[0].name.startsWith('Group') ? '구분' : rowGroup[0].name;
       const columns: GridColumn[] = [
         {
@@ -162,6 +176,18 @@ export const useCreateTable = () => {
             });
           }
         }
+
+        if (showBaseTotal) {
+          for (const baseColumnGroup of baseColumnGroups) {
+            if (baseColumnGroup.children) {
+              baseColumnGroup.children.push({
+                key: `${baseColumnGroup.key}_total`,
+                title: '합계',
+              });
+            }
+          }
+        }
+
         valueColumns.push(...baseColumnGroups);
         columns.push(...baseColumnGroups);
       } else {
@@ -188,7 +214,9 @@ export const useCreateTable = () => {
         rowGroup.map(({ groupId }) => groupId),
       );
 
-      const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns });
+      console.log({ valueColumns });
+
+      const rows: GridRowData[] = extractRowsWithIndent({ groupedData: groupedRowData, valueColumns, showBaseTotal });
 
       if (showRowsTotal) {
         const totalRow: GridRowData = { division: 'Total', total: true };
