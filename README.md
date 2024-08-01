@@ -6,18 +6,22 @@
 - Vite
 - Tailwindcss
 - Shadcn-ui
-- Jest
 - Tanstack Router
+- Json Server (Mock Server)
+- Jest
 
-## Install Dependencies
+> I'm using `npm` for package manager.
 
-```js
+## Install Package
+> This Project has developed on Node.js `v16.20.1`
+```bash
 npm i
 ```
 
-## Run 
+## Starting Development
+Start the app in the `dev` environment:
 
-```js
+```bash
 npx json-server db.json
 npm run dev
 ```
