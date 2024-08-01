@@ -24,6 +24,7 @@ import { CheckedState } from '@radix-ui/react-checkbox';
 import { CheckboxGroup } from '../ui/checkbox';
 import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { CustomGrid } from '../ui/custom-grid';
+import classNames from 'classnames';
 
 const EXCLUDE_VALUES = ['전기', '전기말'];
 
@@ -84,7 +85,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
     // 피봇 테이블 o
     if (colGroup.length && rowGroup.length && lineItems.length) {
-      return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
+      return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal, showBaseTotal });
     }
     return {
       columns: [],
@@ -344,6 +345,22 @@ export const Report: FC<ReportProps> = ({ route }) => {
                   item[groupId] = '외화유가증권';
                   break;
               }
+            } else if (lineItemGroups.length === 1) {
+              switch (item.code) {
+                case '1132000100':
+                case '1182003601':
+                case '1182004000':
+                case '1182000400':
+                case '1182006100':
+                case '1182102103':
+                  item[groupId] = '지분상품';
+                  break;
+                default:
+                  item[groupId] = '채무상품';
+                  break;
+              }
+            } else if (lineItemGroups.length === 2) {
+              item[groupId] = '장부금액';
             }
             return item;
           }),
@@ -373,10 +390,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
       }),
     );
   }, [lineItemGroups]);
-
-  const customFields = useMemo(() => {
-    return lineItems.filter((item) => item.isCustom === true);
-  }, [lineItems]);
 
   useEffect(() => {
     const rows = [];
@@ -448,7 +461,13 @@ export const Report: FC<ReportProps> = ({ route }) => {
                           {fieldHeaders.map((header) => {
                             const value = item[header.value];
                             return (
-                              <td className='px-5'>{typeof value === 'number' ? value.toLocaleString() : value}</td>
+                              <td className={classNames('px-5 text-center', value === null && 'italic text-gray-400')}>
+                                {typeof value === 'number'
+                                  ? value.toLocaleString()
+                                  : value !== null
+                                    ? value
+                                    : '( 사용자 입력 항목 )'}
+                              </td>
                             );
                           })}
                           {lineItemGroups.map(({ groupId }) => {
@@ -489,7 +508,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 title='Row'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
-                customFields={customFields}
                 children={rowGroup.map((col, i) => renderRow(col, i))}
                 showTotal={showRowsTotal}
                 setShowTotal={setShowRowsTotal}
@@ -498,7 +516,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 title='Column'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
-                customFields={customFields}
                 children={colGroup.map((col, i) => renderColumn(col, i))}
                 showTotal={showColsTotal}
                 setShowTotal={setShowColsTotal}
@@ -524,7 +541,6 @@ interface DraggableCardListProps {
   children: ReactNode[];
   groups: ILineItemGroup[];
   setGroups: Dispatch<SetStateAction<ILineItemGroup[]>>;
-  customFields: ILineItem[];
   showTotal: CheckedState;
   setShowTotal: (state: CheckedState) => void;
   showBaseTotal?: CheckedState;
@@ -536,7 +552,6 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
   title,
   children,
   groups,
-  customFields,
   setGroups,
   showTotal,
   setShowTotal,
@@ -547,31 +562,25 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
   const [target, setTarget] = useState<string>();
   const onAddHandler = useCallback(() => {
     if (!target) return;
-    if (target.length > 30) {
-      //group case
 
-      const targetIndex = groups.findIndex((g) => g.groupId === target);
-      if (targetIndex !== -1) {
-        const targetGroup = groups[targetIndex];
-        if (title === 'Row' && targetGroup.axis !== 'row') {
-          targetGroup.axis = 'row';
-          setGroups((prev) => {
-            prev[targetIndex] = targetGroup;
-            return [...prev];
-          });
-        } else if (title === 'Column' && targetGroup.axis !== 'column') {
-          targetGroup.axis = 'column';
-          setGroups((prev: ILineItemGroup[]) => {
-            prev[targetIndex] = targetGroup;
-            return [...prev];
-          });
-        }
+    const targetIndex = groups.findIndex((g) => g.groupId === target);
+    if (targetIndex !== -1) {
+      const targetGroup = groups[targetIndex];
+
+      if (title === 'Row') {
+        targetGroup.axis = 'row';
+        setGroups((prev) => {
+          prev[targetIndex] = targetGroup;
+          return [...prev];
+        });
+      } else if (title === 'Column') {
+        targetGroup.axis = 'column';
+        setGroups((prev: ILineItemGroup[]) => {
+          prev[targetIndex] = targetGroup;
+          return [...prev];
+        });
       }
-    } else {
-      //custom field case
-      //TODO
     }
-    return setTarget(undefined);
   }, [groups, setGroups, target, title]);
 
   return (
@@ -592,16 +601,6 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
                       {groups.map((group) => (
                         <SelectItem key={`select_${group.groupId}`} value={group.groupId}>
                           {group.name}
-                        </SelectItem>
-                      ))}
-                    </>
-                  ) : null}
-                  {customFields.length ? (
-                    <>
-                      <SelectLabel>Custom Fields</SelectLabel>
-                      {customFields.map((field) => (
-                        <SelectItem key={field.name} value={field.name}>
-                          {field.name}
                         </SelectItem>
                       ))}
                     </>
