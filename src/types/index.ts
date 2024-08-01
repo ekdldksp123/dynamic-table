@@ -3,7 +3,6 @@ export interface ILineItemGroup {
   name: string;
   level: number;
   axis?: Axis;
-  total?: number;
   showTotal: boolean;
 }
 export type Axis = 'column' | 'row';
@@ -12,7 +11,7 @@ export interface ILineItem {
   name: string;
   [key: string]: ItemValueType;
   base: string[];
-  isCustom: boolean;
+  customFields: string[];
   value?: number; //LTD (Base) - 당기, 당기말
 }
 

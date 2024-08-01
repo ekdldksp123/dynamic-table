@@ -15,7 +15,7 @@ export const Route = createFileRoute('/reports/$reportId/')({
         case 'code':
         case 'name':
         case 'base':
-        case 'isCustom':
+        case 'customFields':
           display = false;
           break;
         case 'value':

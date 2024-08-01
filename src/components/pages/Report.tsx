@@ -47,7 +47,11 @@ export const Report: FC<ReportProps> = ({ route }) => {
       const fieldHeaders = Object.keys(lineItems[0])
         .filter(
           (key) =>
-            key !== 'isCustom' && key !== 'value' && key !== 'base' && key.length < 20 && !EXCLUDE_VALUES.includes(key),
+            key !== 'customFields' &&
+            key !== 'value' &&
+            key !== 'base' &&
+            key.length < 20 &&
+            !EXCLUDE_VALUES.includes(key),
         )
         .map((key) => {
           return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`, value: key };
@@ -294,6 +298,57 @@ export const Report: FC<ReportProps> = ({ route }) => {
           }),
         );
         break;
+      case '주석 06_01':
+        setLineItems((prev) =>
+          prev.map((item) => {
+            if (lineItemGroups.length === 0) {
+              switch (item.code) {
+                case '1132000100':
+                case '1182003601':
+                case '1182004000':
+                  item[groupId] = '주식';
+                  break;
+                case '1182000400':
+                case '1182006100':
+                case '1182102103':
+                  item[groupId] = '출자금';
+                  break;
+                case '1113002100':
+                case '1113002300':
+                case '1113003400':
+                case '1113004200':
+                  item[groupId] = '국공채';
+                  break;
+                case '1113002303':
+                case '1114000100':
+                case '1115002004':
+                case '1115004004':
+                  item[groupId] = '특수채';
+                  break;
+                case '1113002002':
+                  item[groupId] = '금융채';
+                  break;
+                case '1112000100':
+                case '1123102000':
+                case '1123103000':
+                case '1123105000':
+                  item[groupId] = '회사채';
+                  break;
+                case '1182002000':
+                case '1182003000':
+                case '1182003200':
+                case '1183100400':
+                  item[groupId] = '수익증권';
+                  break;
+                default:
+                  item[groupId] = '외화유가증권';
+                  break;
+              }
+            }
+            return item;
+          }),
+        );
+        break;
       default:
         setLineItems((prev) =>
           prev.map((item) => {
@@ -492,7 +547,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
   const [target, setTarget] = useState<string>();
   const onAddHandler = useCallback(() => {
     if (!target) return;
-    if (target.length > 9) {
+    if (target.length > 30) {
       //group case
 
       const targetIndex = groups.findIndex((g) => g.groupId === target);
@@ -545,7 +600,7 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
                     <>
                       <SelectLabel>Custom Fields</SelectLabel>
                       {customFields.map((field) => (
-                        <SelectItem key={field.name} value={field.code}>
+                        <SelectItem key={field.name} value={field.name}>
                           {field.name}
                         </SelectItem>
                       ))}
