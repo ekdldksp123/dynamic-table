@@ -502,6 +502,42 @@
           "base": ["당기", "전기"]
         }
       ]
+    },{
+      "id": 4,
+      "name": "주석 06_01",
+      "items": [
+        {"code": "1132000100", "name": "매도가능주식 - 평가손익조정",  "base": ["당기말"], "isCustom": false, "value": 0},
+        {"code": "1182003601", "name": "매도가능주식 - Sales And Redemps",  "base": ["당기말"], "isCustom": false, "value": 0},
+        {"code": "1182004000", "name": "매도가능주식 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 738396},
+        {"code": "1182000400", "name": "매도가능출자금 - 평가손익조정",  "base": ["당기말"], "isCustom": false, "value": 5902610},
+        {"code": "1182006100", "name": "매도가능출자금 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 115931},
+        {"code": "1182102103", "name": "매도가능출자금 - 감액충당",  "base": ["당기말"], "isCustom": false, "value": 0},
+        {"code": "1113002100", "name": "매도가능국채 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1113002300", "name": "매도가능공채 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1113003400", "name": "매도가능국채 - Sales And Redemps",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1113004200", "name": "매도가능국채 - Amort",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1113002303", "name": "매도가능특수채(연금/자연)",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1114000100", "name": "매도가능특수채 - 평가손익조정",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1115002004", "name": "매도가능특수채 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1115004004", "name": "매도가능특수채 - Amort",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1113002002", "name": "매도가능금융채 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1112000100", "name": "매도가능무보증회사채 - 평가손익조정",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123102000", "name": "매도가능무보증회사채 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123103000", "name": "매도가능무보증회사채 - Sales And Redemps",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123105000", "name": "매도가능무보증회사채 - Amort",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182002000", "name": "매도가능수익증권 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182003000", "name": "매도가능수익증권 - Sales And Redemps",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182003200", "name": "매도가능수익증권 - Oth JV-Equity-Operating Distri",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1183100400", "name": "매도가능수익증권 - 평가손익조정",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123202000", "name": "매도가능외화증권-채권 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123203000", "name": "매도가능외화증권-채권 - Sales And Redemps",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123205000", "name": "매도가능외화증권-채권 - Amort",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1123208000", "name": "매도가능외화증권-채권 - 감액충당",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182002300", "name": "매도가능외화증권-수익증권 - Purchase",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182003210", "name": "매도가능외화증권-수익증권 - Sales And Redemps",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182104120", "name": "매도가능외화증권-수익증권 - 시가평가조정",  "base": ["당기말"], "isCustom": false, "value": 10000},
+        {"code": "1182701125", "name": "매도가능외화증권-수익증권 - 환율평가조정 CY",  "base": ["당기말"], "isCustom": false, "value": 10000}
+      ]
     }
   ]
 }

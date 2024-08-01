@@ -60,4 +60,6 @@ export interface IReport {
   gridOptions?: unknown;
   showRowsTotal?: boolean;
   showColsTotal?: boolean;
+  writer?: string;
+  reviewer?: string;
 }
