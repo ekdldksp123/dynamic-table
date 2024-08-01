@@ -408,7 +408,7 @@ export const useCreateTable = () => {
       if (colGroup.length === 1 && groupedColumnsKeys.length === 1) {
         const columns: GridColumn[] = [{ title: groupedColumnsKeys[0], key: 'value' }];
 
-        if (lineItems[0].customFields.length) {
+        if (lineItems[0].customFields?.length) {
           columns.unshift(
             ...lineItems[0].customFields.map((customField) => {
               return {
@@ -497,10 +497,9 @@ export const useCreateTable = () => {
         const { columns, fieldValuesMap, total } = transformToGridColumnsData(groupedColumnData);
         const fields = Object.keys(fieldValuesMap);
 
-        if (lineItems[0].customFields.length) {
+        if (lineItems[0].customFields?.length) {
           columns.unshift(
             ...lineItems[0].customFields.map((customField) => {
-              console.log({ customField });
               return {
                 key: customField,
                 title: customField,

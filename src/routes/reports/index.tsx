@@ -2,14 +2,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { FC } from 'react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { IReport } from '@/types';
+import { getAllReports } from '@/libs/api';
 
 export const Route = createFileRoute('/reports/')({
-  loader: async () => {
-    const res = await fetch(`http://localhost:3000/reports`);
-    const json = await res.json();
-
-    return json as unknown as IReport[];
-  },
+  loader: async () => await getAllReports(),
   component: () => <Reports route={Route} />,
 });
 

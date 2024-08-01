@@ -25,6 +25,7 @@ import { CheckboxGroup } from '../ui/checkbox';
 import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { CustomGrid } from '../ui/custom-grid';
 import classNames from 'classnames';
+import { updateReportById } from '@/libs/api';
 
 const EXCLUDE_VALUES = ['전기', '전기말'];
 
@@ -391,6 +392,25 @@ export const Report: FC<ReportProps> = ({ route }) => {
     );
   }, [lineItemGroups]);
 
+  const onSaveHandler = async () => {
+    const newReport = {
+      id: report.id,
+      items: lineItems,
+      groups: lineItemGroups,
+      colGroup,
+      rowGroup,
+      showRowsTotal,
+      showColsTotal,
+      showBaseTotal,
+    };
+    try {
+      await updateReportById(report.id, newReport);
+      alert('report config saved!');
+    } catch (error) {
+      alert(`failed to save report config :: ${(error as Error).message}`);
+    }
+  };
+
   useEffect(() => {
     const rows = [];
     const cols = [];
@@ -409,7 +429,13 @@ export const Report: FC<ReportProps> = ({ route }) => {
   return (
     <div className='p-5 bg-gray-100'>
       <div className='p-5 bg-white'>
-        <p className='font-bold text-lg'>Report Name</p>
+        <div className='flex relative w-[100%]'>
+          <p className='font-bold text-lg'>Report Name</p>
+          <Button className='absolute right-0 px-5' onClick={onSaveHandler}>
+            Save
+          </Button>
+        </div>
+
         <h2>{report?.name}</h2>
         <section className='flex gap-3 w-[100%] h-[550px] overflow-y-auto'>
           <section className='w-[80%] overflow-x-auto'>

@@ -1,3 +1,5 @@
+import { CheckedState } from '@radix-ui/react-checkbox';
+
 export interface ILineItemGroup {
   groupId: string;
   name: string;
@@ -11,7 +13,7 @@ export interface ILineItem {
   name: string;
   [key: string]: ItemValueType;
   base: string[];
-  customFields: string[];
+  customFields?: string[];
   value?: number; //LTD (Base) - 당기, 당기말
 }
 
@@ -56,9 +58,9 @@ export interface IReport {
   groups?: ILineItemGroup[];
   colGroup?: ILineItemGroup[];
   rowGroup?: ILineItemGroup[];
-  gridOptions?: unknown;
-  showRowsTotal?: boolean;
-  showColsTotal?: boolean;
+  showRowsTotal?: CheckedState;
+  showColsTotal?: CheckedState;
+  showBaseTotal?: CheckedState;
   writer?: string;
   reviewer?: string;
 }

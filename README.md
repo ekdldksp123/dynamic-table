@@ -22,6 +22,6 @@ npm i
 Start the app in the `dev` environment:
 
 ```bash
-npx json-server db.json
+npx json-server --watch db.json
 npm run dev
 ```
