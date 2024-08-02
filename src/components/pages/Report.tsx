@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ItemValueType, ILineItem, ILineItemGroup, IReport } from '@/types';
+import { ItemValueType, ILineItem, ILineItemGroup, IReportConfig } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import { updateReportById } from '@/libs/api';
 const EXCLUDE_VALUES = ['전기', '전기말'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
-  const report: IReport = route.useLoaderData();
+  const report: IReportConfig = route.useLoaderData();
 
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
@@ -394,7 +394,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const onSaveHandler = async () => {
     const newReport = {
-      id: report.id,
       items: lineItems,
       groups: lineItemGroups,
       colGroup,

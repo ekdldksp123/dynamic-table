@@ -49,8 +49,11 @@ export type GridRowData = {
   division?: ItemValueType;
   [key: string]: ItemValueType;
 };
-export interface IReport {
+
+//보고서명, 질의 보고서 번호, 보고서 양식 고유번호 = id
+export interface IReportConfig {
   id: number;
+  reportQueryNo: string;
   name: string;
   created_at?: string;
   items: ILineItem[];
@@ -61,6 +64,9 @@ export interface IReport {
   showRowsTotal?: CheckedState;
   showColsTotal?: CheckedState;
   showBaseTotal?: CheckedState;
-  writer?: string;
-  reviewer?: string;
+  writer?: string; // 담당자
+  reviewer?: string; // 결재자
+  status?: string; // 작성, 미작성, 결재중, 진행중, 결재완료, 반려
+  mode: 'create' | 'edit';
+  useOrNot?: boolean;
 }

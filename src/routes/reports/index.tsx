@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { FC } from 'react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { IReport } from '@/types';
+import { IReportConfig } from '@/types';
 import { getAllReports } from '@/libs/api';
 
 export const Route = createFileRoute('/reports/')({
@@ -16,7 +16,7 @@ interface ReportsProps {
 const Reports: FC<ReportsProps> = ({ route }) => {
   const navigate = useNavigate();
 
-  const reports: IReport[] = route.useLoaderData();
+  const reports: IReportConfig[] = route.useLoaderData();
 
   return (
     <Table>

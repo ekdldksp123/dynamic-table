@@ -1,13 +1,20 @@
-import { IReport } from '@/types';
+import { IReportConfig } from '@/types';
 import axios from 'axios';
 
-export const getAllReports = async (): Promise<IReport[]> => {
-  const res = await axios.get(`http://localhost:3000/reports`);
-  return res.data as unknown as IReport[];
+const instance = axios.create({
+  baseURL: 'http://localhost:3000/',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const getAllReports = async (): Promise<IReportConfig[]> => {
+  const res = await instance.get('reports');
+  return res.data as unknown as IReportConfig[];
 };
 
-export const getReportById = async (reportId: string): Promise<IReport> => {
-  const res = await axios.get(`http://localhost:3000/reports?id=${reportId}`);
+export const getReportById = async (reportId: string): Promise<IReportConfig> => {
+  const res = await instance.get(`reports?id=${reportId}`);
   const reportConfig = res.data;
 
   const itemsKey = reportConfig[0].items.length ? Object.keys(reportConfig[0].items[0]) : [];
@@ -34,8 +41,8 @@ export const getReportById = async (reportId: string): Promise<IReport> => {
 };
 
 export const updateReportById = async (id: number, updates: Record<string, unknown>) => {
-  await axios
-    .patch(`http://localhost:3000/reports/${id}`, updates)
+  await instance
+    .patch(`reports/${id}`, updates)
     .then((res) => res)
     .catch((err) => {
       throw err;
