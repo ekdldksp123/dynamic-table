@@ -43,8 +43,9 @@ export const getReportById = async (reportId: string): Promise<IReportConfig> =>
 export const updateReportById = async (id: number, updates: Record<string, unknown>) => {
   await instance
     .patch(`reports/${id}`, updates)
-    .then((res) => res)
+    .then((res) => console.log(res.data))
     .catch((err) => {
+      console.error(err);
       throw err;
     });
 };

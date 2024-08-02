@@ -32,8 +32,14 @@ const EXCLUDE_VALUES = ['전기', '전기말'];
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
 
+  console.log({ report });
+
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
+
+  useEffect(() => {
+    console.log({ lineItemGroups });
+  }, [lineItemGroups]);
 
   const [colGroup, setColGroup] = useState<ILineItemGroup[]>(report.colGroup ?? []);
   const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>(report.rowGroup ?? []);
@@ -392,7 +398,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
     );
   }, [lineItemGroups]);
 
-  const onSaveHandler = async () => {
+  const onSaveHandler = useCallback(async () => {
     const newReport = {
       items: lineItems,
       groups: lineItemGroups,
@@ -408,22 +414,24 @@ export const Report: FC<ReportProps> = ({ route }) => {
     } catch (error) {
       alert(`failed to save report config :: ${(error as Error).message}`);
     }
-  };
+  }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showBaseTotal, showColsTotal, showRowsTotal]);
 
   useEffect(() => {
-    const rows = [];
-    const cols = [];
-    for (const group of lineItemGroups) {
-      if (group.axis === 'row') {
-        rows.push(group);
-      } else if (group.axis === 'column') {
-        cols.push(group);
+    if (!report.rowGroup?.length && !report.colGroup?.length) {
+      const rows = [];
+      const cols = [];
+      for (const group of lineItemGroups) {
+        if (group.axis === 'row') {
+          rows.push(group);
+        } else if (group.axis === 'column') {
+          cols.push(group);
+        }
       }
-    }
 
-    if (rows.length) setRowGroup(rows);
-    if (cols.length) setColGroup(cols);
-  }, [lineItemGroups]);
+      if (rows.length) setRowGroup(rows);
+      if (cols.length) setColGroup(cols);
+    }
+  }, [lineItemGroups, report.colGroup?.length, report.rowGroup?.length]);
 
   return (
     <div className='p-5 bg-gray-100'>
@@ -482,7 +490,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                   {lineItems.length &&
                     lineItems.map((item, index) => {
                       return (
-                        <tr key={item.code} className='border-b border-b-double border-b-neutral-200'>
+                        <tr key={`${index}-${item.code}`} className='border-b border-b-double border-b-neutral-200'>
                           {fieldHeaders.map((header) => {
                             const value = item[header.value];
                             return (

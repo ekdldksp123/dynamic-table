@@ -235,7 +235,7 @@ export const useCreateTable = () => {
       if (showRowsTotal) {
         for (const row of rows) {
           if (row.division === '총계') {
-            console.log({ showRowsTotal, row });
+            // console.log({ showRowsTotal, row });
             row.show = true;
 
             for (const { children } of valueColumns) {
@@ -441,7 +441,7 @@ export const useCreateTable = () => {
         if (showRowsTotal) {
           for (const row of rows) {
             if (row.division === '총계') {
-              console.log({ showRowsTotal, row });
+              // console.log({ showRowsTotal, row });
               row.show = true;
 
               for (const { children } of valueColumns) {
@@ -613,7 +613,7 @@ export const useCreateTable = () => {
           rows.push(row);
         }
 
-        console.log({ columns, rows });
+        // console.log({ columns, rows });
         return {
           columns,
           rows,
