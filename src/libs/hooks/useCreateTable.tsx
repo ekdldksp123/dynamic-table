@@ -13,30 +13,7 @@ import {
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { areStringArraysEqual } from '../utils';
 import { useCallback } from 'react';
-
-interface IGetPivotGridData {
-  lineItems: ILineItem[];
-  colGroup: ILineItemGroup[];
-  rowGroup: ILineItemGroup[];
-  showColsTotal: CheckedState;
-  showRowsTotal: CheckedState;
-  showBaseTotal: CheckedState;
-}
-
-interface IGetBasicGridData {
-  headers: string[];
-  lineItems: ILineItem[];
-  lineItemGroups: ILineItemGroup[];
-}
-
-interface IGetOnlyRowGroupGridData {
-  headers: string[];
-  rowGroup: ILineItemGroup[];
-  lineItems: ILineItem[];
-  lineItemGroups: ILineItemGroup[];
-  showRowsTotal: CheckedState;
-  showBaseTotal: CheckedState;
-}
+import { IGetBasicGridData, IGetOnlyRowGroupGridData, IGetPivotGridData } from '@/types/create-table';
 
 type GridColumnsData = {
   columns: GridColumn[];
