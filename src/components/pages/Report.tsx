@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ItemValueType, ILineItem, ILineItemGroup, IReportConfig } from '@/types';
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,7 @@ import { useCreateTable } from '@/libs/hooks/useCreateTable';
 import { CustomGrid } from '../ui/custom-grid';
 import classNames from 'classnames';
 import { updateReportById } from '@/libs/api';
+import { ILineItem, ILineItemGroup, IReportConfig, ItemValueType } from '@/types';
 
 const EXCLUDE_VALUES = ['전기', '전기말'];
 

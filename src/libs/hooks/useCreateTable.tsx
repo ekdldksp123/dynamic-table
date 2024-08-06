@@ -11,7 +11,7 @@ import {
   Subtotals,
 } from '@/types';
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { areStringArraysEqual } from '../utils';
+import { areStringArraysEqual, groupByHierarchical } from '../utils';
 import { useCallback } from 'react';
 import { IGetBasicGridData, IGetOnlyRowGroupGridData, IGetPivotGridData } from '@/types/create-table';
 
@@ -622,39 +622,6 @@ export const useCreateTable = () => {
       }
     }
     return { groupValues, lineItemCodesMap };
-  };
-
-  // 계층 구조 그루핑하기
-  const groupByHierarchical = (data: ILineItem[], keys: (keyof ILineItem)[]): GroupedData => {
-    const groupByRecursively = (items: ILineItem[], remainingKeys: (keyof ILineItem)[]): GroupedData | ILineItem[] => {
-      if (remainingKeys.length === 0) {
-        return items;
-      }
-      const [currentKey, ...nextKeys] = remainingKeys;
-      return items.reduce((result, item) => {
-        const groupKey = item[currentKey] as unknown as KeyTypeFromItemValue;
-        if (!result[groupKey]) {
-          result[groupKey] = [];
-        }
-        (result[groupKey] as ILineItem[]).push(item);
-        return result;
-      }, {} as GroupedData);
-    };
-
-    const nestedGroupBy = (groupedData: GroupedData, keys: (keyof ILineItem)[]): GroupedData => {
-      if (keys.length === 0) return groupedData;
-      const [currentKey, ...nextKeys] = keys;
-      for (const key in groupedData) {
-        if (Array.isArray(groupedData[key])) {
-          groupedData[key] = groupByRecursively(groupedData[key] as ILineItem[], [currentKey]);
-          nestedGroupBy(groupedData[key] as GroupedData, nextKeys);
-        }
-      }
-      return groupedData;
-    };
-
-    const initialGroup = groupByRecursively(data, [keys[0]]);
-    return nestedGroupBy(initialGroup as GroupedData, keys.slice(1));
   };
 
   // 그룹핑된 데이터로 테이블 컬럼, 값 필드, 그룹에 해당하는 값 배열 추출하기
