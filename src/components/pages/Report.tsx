@@ -26,23 +26,17 @@ import { CustomGrid } from '../ui/custom-grid';
 import classNames from 'classnames';
 import { updateReportById } from '@/libs/api';
 import { ILineItem, ILineItemGroup, IReportConfig, ItemValueType } from '@/types';
+import { useGroupState } from '@/shared/groupState.provider';
 
 const EXCLUDE_VALUES = ['전기', '전기말'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
 
-  console.log({ report });
-
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
-  useEffect(() => {
-    console.log({ lineItemGroups });
-  }, [lineItemGroups]);
-
-  const [colGroup, setColGroup] = useState<ILineItemGroup[]>(report.colGroup ?? []);
-  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>(report.rowGroup ?? []);
+  const { colGroup, setColGroup, rowGroup, setRowGroup } = useGroupState();
 
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
@@ -129,7 +123,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
         }),
       );
     },
-    [colGroup],
+    [colGroup, setColGroup],
   );
 
   const moveRowGroup = useCallback(
@@ -144,17 +138,17 @@ export const Report: FC<ReportProps> = ({ route }) => {
         }),
       );
     },
-    [rowGroup],
+    [rowGroup, setRowGroup],
   );
 
   const removeFromRowGroup = useCallback(
     (groupId: string) => setRowGroup((prev) => [...prev.filter((group) => group.groupId !== groupId)]),
-    [],
+    [setRowGroup],
   );
 
   const removeFromColGroup = useCallback(
     (groupId: string) => setColGroup((prev) => [...prev.filter((group) => group.groupId !== groupId)]),
-    [],
+    [setColGroup],
   );
 
   const onChangeRowShowTotal = useCallback(
@@ -173,7 +167,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
         setShowRowsTotal(showTotal);
       }
     },
-    [rowGroup],
+    [rowGroup, setRowGroup],
   );
 
   const onChangeColShowTotal = useCallback(
@@ -192,7 +186,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
         setShowColsTotal(showTotal);
       }
     },
-    [colGroup],
+    [colGroup, setColGroup],
   );
 
   const renderRow = useCallback(
@@ -431,7 +425,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
       if (rows.length) setRowGroup(rows);
       if (cols.length) setColGroup(cols);
     }
-  }, [lineItemGroups, report.colGroup?.length, report.rowGroup?.length]);
+  }, [lineItemGroups, report.colGroup?.length, report.rowGroup?.length, setColGroup, setRowGroup]);
 
   return (
     <div className='p-5 bg-gray-100'>
