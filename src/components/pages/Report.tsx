@@ -412,19 +412,32 @@ export const Report: FC<ReportProps> = ({ route }) => {
   }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showBaseTotal, showColsTotal, showRowsTotal]);
 
   useEffect(() => {
-    const rows = [];
-    const cols = [];
-    for (const group of lineItemGroups) {
-      if (group.axis === 'row') {
-        rows.push(group);
-      } else if (group.axis === 'column') {
-        cols.push(group);
+    if (!report.rowGroup?.length && !report.colGroup?.length) {
+      const rows = [];
+      const cols = [];
+      for (const group of lineItemGroups) {
+        if (group.axis === 'row') {
+          rows.push(group);
+        } else if (group.axis === 'column') {
+          cols.push(group);
+        }
       }
-    }
 
-    if (rows.length) setRowGroup(rows);
-    if (cols.length) setColGroup(cols);
-  }, [lineItemGroups, report.colGroup?.length, report.rowGroup?.length, setColGroup, setRowGroup]);
+      if (rows.length) setRowGroup(rows);
+      if (cols.length) setColGroup(cols);
+    } else {
+      setRowGroup(report.rowGroup ?? []);
+      setColGroup(report.colGroup ?? []);
+    }
+  }, [
+    lineItemGroups,
+    report.colGroup,
+    report.colGroup?.length,
+    report.rowGroup,
+    report.rowGroup?.length,
+    setColGroup,
+    setRowGroup,
+  ]);
 
   return (
     <div className='p-5 bg-gray-100'>
