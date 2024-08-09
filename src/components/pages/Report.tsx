@@ -32,6 +32,7 @@ const EXCLUDE_VALUES = ['전기', '전기말'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
+  // console.log({ report });
 
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
@@ -67,7 +68,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const headers = useMemo(
     () =>
       Object.keys(report.itemsDisplayInfo)
-        .filter((key) => report.itemsDisplayInfo[key] !== false)
+        .filter((key) => report.itemsDisplayInfo[key] !== false && key.length < 30)
         .map((key) => `${key.charAt(0).toUpperCase()}${key.slice(1)}`),
 
     [report.itemsDisplayInfo],
@@ -411,20 +412,18 @@ export const Report: FC<ReportProps> = ({ route }) => {
   }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showBaseTotal, showColsTotal, showRowsTotal]);
 
   useEffect(() => {
-    if (!report.rowGroup?.length && !report.colGroup?.length) {
-      const rows = [];
-      const cols = [];
-      for (const group of lineItemGroups) {
-        if (group.axis === 'row') {
-          rows.push(group);
-        } else if (group.axis === 'column') {
-          cols.push(group);
-        }
+    const rows = [];
+    const cols = [];
+    for (const group of lineItemGroups) {
+      if (group.axis === 'row') {
+        rows.push(group);
+      } else if (group.axis === 'column') {
+        cols.push(group);
       }
-
-      if (rows.length) setRowGroup(rows);
-      if (cols.length) setColGroup(cols);
     }
+
+    if (rows.length) setRowGroup(rows);
+    if (cols.length) setColGroup(cols);
   }, [lineItemGroups, report.colGroup?.length, report.rowGroup?.length, setColGroup, setRowGroup]);
 
   return (

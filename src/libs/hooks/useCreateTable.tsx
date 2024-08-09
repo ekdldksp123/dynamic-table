@@ -329,6 +329,7 @@ export const useCreateTable = () => {
         }
         rows.push(data);
       }
+
       return {
         columns,
         rows,
