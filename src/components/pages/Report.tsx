@@ -32,7 +32,6 @@ const EXCLUDE_VALUES = ['전기', '전기말'];
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
-  // console.log({ report });
 
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
@@ -240,12 +239,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
           prev.map((item, i) => {
             item[groupId] =
               lineItemGroups.length === 0
-                ? item.name.split('_')[0]
+                ? (item.name as string | undefined)?.split('_')[0]
                 : lineItemGroups.length === 1
                   ? item.name === prev[i - 1]?.name
                     ? '부채'
                     : '자산'
-                  : item.name.split('_')[1] === '매매'
+                  : (item.name as string | undefined)?.split('_')[1] === '매매'
                     ? '매매목적'
                     : '위험회피목적';
             return item;
@@ -411,6 +410,15 @@ export const Report: FC<ReportProps> = ({ route }) => {
     }
   }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showBaseTotal, showColsTotal, showRowsTotal]);
 
+  const renderRowGroups = useMemo(
+    () => lineItemGroups.filter((g) => g.axis === 'row').map((col, i) => renderRow(col, i)),
+    [lineItemGroups, renderRow],
+  );
+  const renderColGroups = useMemo(
+    () => lineItemGroups.filter((g) => g.axis === 'column').map((col, i) => renderColumn(col, i)),
+    [lineItemGroups, renderColumn],
+  );
+
   useEffect(() => {
     if (!report.rowGroup?.length && !report.colGroup?.length) {
       const rows = [];
@@ -547,20 +555,22 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 title='Row'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
-                children={rowGroup.map((col, i) => renderRow(col, i))}
+                children={renderRowGroups}
                 showTotal={showRowsTotal}
                 setShowTotal={setShowRowsTotal}
+                // separateGroups={separateGroups}
               />
               <DraggableCardList
                 title='Column'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
-                children={colGroup.map((col, i) => renderColumn(col, i))}
+                children={renderColGroups}
                 showTotal={showColsTotal}
                 setShowTotal={setShowColsTotal}
                 disableShowBaseTotal={disableShowBaseTotal}
                 showBaseTotal={showBaseTotal}
                 setShowBaseTotal={setShowBaseTotal}
+                // separateGroups={separateGroups}
               />
             </div>
           </section>
@@ -603,23 +613,15 @@ const DraggableCardList: FC<DraggableCardListProps> = ({
     if (!target) return;
 
     const targetIndex = groups.findIndex((g) => g.groupId === target);
-    if (targetIndex !== -1) {
-      const targetGroup = groups[targetIndex];
 
-      if (title === 'Row') {
-        targetGroup.axis = 'row';
-        setGroups((prev) => {
-          prev[targetIndex] = targetGroup;
-          return [...prev];
-        });
-      } else if (title === 'Column') {
-        targetGroup.axis = 'column';
-        setGroups((prev: ILineItemGroup[]) => {
-          prev[targetIndex] = targetGroup;
-          return [...prev];
-        });
-      }
-    }
+    if (targetIndex === -1) return;
+    const targetGroup = { ...groups[targetIndex] };
+
+    targetGroup.axis = title === 'Row' ? 'row' : 'column';
+    setGroups((prev) => {
+      prev[targetIndex] = targetGroup;
+      return [...prev];
+    });
   }, [groups, setGroups, target, title]);
 
   return (

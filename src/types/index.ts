@@ -9,17 +9,11 @@ export interface ILineItemGroup {
 }
 export type Axis = 'column' | 'row';
 export interface ILineItem {
-  code: string;
-  name: string;
   [key: string]: ItemValueType;
   base: string[];
   customFields?: string[];
   value?: number; //LTD (Base) - 당기, 당기말
 }
-
-export type GroupedData = {
-  [key: string]: GroupedData | ILineItem[];
-};
 
 export type LineItemKey = keyof ILineItem;
 
@@ -27,17 +21,18 @@ export interface ILineItemColumnDisplayOrNot {
   [key: LineItemKey]: boolean | undefined;
 }
 
+export type ItemValueType = string | string[] | number | boolean | null | undefined;
+
+export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | null | undefined>;
+
+export type GroupedData = {
+  [key: string]: GroupedData | ILineItem[];
+};
 export type Subtotals = {
   [key: string]: Subtotals | Subtotal[];
 };
 
 export type Subtotal = { subtotal: number };
-
-export type ItemValueType = string | string[] | number | boolean | null | undefined;
-
-export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | null | undefined>;
-
-// export type GridColumnDef = ColDef | ColGroupDef;
 
 export type GridColumn = {
   title: string;
