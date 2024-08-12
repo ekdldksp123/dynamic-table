@@ -141,14 +141,18 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [rowGroup, setRowGroup],
   );
 
-  const removeFromRowGroup = useCallback(
-    (groupId: string) => setRowGroup((prev) => [...prev.filter((group) => group.groupId !== groupId)]),
+  const removeFromRowOrColGroup = useCallback(
+    (groupId: string) =>
+      setRowGroup((prev) =>
+        prev.map((group) => {
+          if (group.groupId === groupId) {
+            group.axis = undefined;
+            return group;
+          }
+          return group;
+        }),
+      ),
     [setRowGroup],
-  );
-
-  const removeFromColGroup = useCallback(
-    (groupId: string) => setColGroup((prev) => [...prev.filter((group) => group.groupId !== groupId)]),
-    [setColGroup],
   );
 
   const onChangeRowShowTotal = useCallback(
@@ -198,12 +202,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
           group={group}
           index={index}
           onMoveGroup={moveRowGroup}
-          onRemoveGroup={removeFromRowGroup}
+          onRemoveGroup={removeFromRowOrColGroup}
           onChangeShowTotal={onChangeRowShowTotal}
         />
       );
     },
-    [moveRowGroup, onChangeRowShowTotal, removeFromRowGroup],
+    [moveRowGroup, onChangeRowShowTotal, removeFromRowOrColGroup],
   );
 
   const renderColumn = useCallback(
@@ -215,12 +219,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
           group={group}
           index={index}
           onMoveGroup={moveColGroup}
-          onRemoveGroup={removeFromColGroup}
+          onRemoveGroup={removeFromRowOrColGroup}
           onChangeShowTotal={onChangeColShowTotal}
         />
       );
     },
-    [moveColGroup, onChangeColShowTotal, removeFromColGroup],
+    [moveColGroup, onChangeColShowTotal, removeFromRowOrColGroup],
   );
 
   const onAddGroup = useCallback(() => {
