@@ -143,7 +143,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const removeFromRowOrColGroup = useCallback(
     (groupId: string) =>
-      setRowGroup((prev) =>
+      setLineItemsGroups((prev) =>
         prev.map((group) => {
           if (group.groupId === groupId) {
             group.axis = undefined;
@@ -152,7 +152,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
           return group;
         }),
       ),
-    [setRowGroup],
+    [setLineItemsGroups],
   );
 
   const onChangeRowShowTotal = useCallback(
