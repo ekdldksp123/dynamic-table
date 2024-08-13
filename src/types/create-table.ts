@@ -14,6 +14,8 @@ export interface IGetBasicGridData {
   headers: string[];
   lineItems: ILineItem[];
   lineItemGroups: ILineItemGroup[];
+  showRowsTotal: CheckedState;
+  showBaseTotal: CheckedState;
 }
 
 export interface IGetOnlyRowGroupGridData {

@@ -1,4 +1,4 @@
-import { GroupedData, ILineItem, KeyTypeFromItemValue } from '@/types';
+import { GroupedData, ILineItem, KeyTypeFromItemValue, LineItemKey } from '@/types';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,8 +10,8 @@ export const areStringArraysEqual = (arr1: string[], arr2: string[]): boolean =>
   if (arr1.length !== arr2.length) return false; // 배열의 길이가 다르면 false
 
   // 배열을 정렬하여 비교
-  const sortedArr1 = arr1.slice().sort();
-  const sortedArr2 = arr2.slice().sort();
+  const sortedArr1 = arr1.sort();
+  const sortedArr2 = arr2.sort();
 
   for (let i = 0; i < sortedArr1.length; i++) {
     if (sortedArr1[i] !== sortedArr2[i]) {
@@ -23,8 +23,8 @@ export const areStringArraysEqual = (arr1: string[], arr2: string[]): boolean =>
 };
 
 // 계층 구조 그루핑하기
-export const groupByHierarchical = (data: ILineItem[], keys: (keyof ILineItem)[]): GroupedData => {
-  const groupByRecursively = (items: ILineItem[], remainingKeys: (keyof ILineItem)[]): GroupedData | ILineItem[] => {
+export const groupByHierarchical = (data: ILineItem[], keys: LineItemKey[]): GroupedData => {
+  const groupByRecursively = (items: ILineItem[], remainingKeys: LineItemKey[]): GroupedData | ILineItem[] => {
     if (remainingKeys.length === 0) {
       return items;
     }
@@ -40,7 +40,7 @@ export const groupByHierarchical = (data: ILineItem[], keys: (keyof ILineItem)[]
     }, {} as GroupedData);
   };
 
-  const nestedGroupBy = (groupedData: GroupedData, keys: (keyof ILineItem)[]): GroupedData => {
+  const nestedGroupBy = (groupedData: GroupedData, keys: LineItemKey[]): GroupedData => {
     if (keys.length === 0) return groupedData;
     const [currentKey, ...nextKeys] = keys;
     for (const key in groupedData) {

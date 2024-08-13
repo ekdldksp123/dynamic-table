@@ -21,6 +21,14 @@ type GridColumnsData = {
   total: number;
 };
 
+interface IExtractRowsWithIndent {
+  groupedData: GroupedData | ILineItem[];
+  indentLevel?: number;
+  result?: GridRowData[];
+  valueColumns: GridColumn[];
+  showBaseTotal: CheckedState;
+}
+
 export const useCreateTable = () => {
   const extractRowsWithIndent = useCallback(
     ({
@@ -29,13 +37,7 @@ export const useCreateTable = () => {
       result = [],
       valueColumns,
       showBaseTotal,
-    }: {
-      groupedData: GroupedData | ILineItem[];
-      indentLevel?: number;
-      result?: GridRowData[];
-      valueColumns: GridColumn[];
-      showBaseTotal: CheckedState;
-    }): GridRowData[] => {
+    }: IExtractRowsWithIndent): GridRowData[] => {
       if (Array.isArray(groupedData)) return result;
 
       const indent = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'.repeat(indentLevel);
@@ -113,17 +115,14 @@ export const useCreateTable = () => {
         }
       }
 
-      const subtotalRow: GridRowData = {
-        division: `${indent}${indentLevel === 0 ? '총계' : '합계'}`,
-        show: false,
-        depth: indentLevel,
-      };
-      const subtotalEntries = Object.entries(subtotal);
+      if (Object.keys(subtotal).length) {
+        const subtotalRow: GridRowData = {
+          division: `${indent}${indentLevel === 0 ? '총계' : '합계'}`,
+          show: false,
+          depth: indentLevel,
+          ...subtotal,
+        };
 
-      if (subtotalEntries.length) {
-        Object.entries(subtotal).forEach(([key, value]) => {
-          subtotalRow[key] = value;
-        });
         result.push(subtotalRow);
       }
 
@@ -337,7 +336,7 @@ export const useCreateTable = () => {
     } else {
       const columns: GridColumn[] = [...headers, ...lineItemGroups].map((col: string | ILineItemGroup) => {
         const key = typeof col === 'string' ? col.toLowerCase() : col.groupId;
-        const header = typeof col === 'string' ? (key !== 'value' ? col : lineItems[0].base[0]) : col.name;
+        const header = typeof col === 'string' ? (key !== 'value' ? col : firstItem.base[0]) : col.name;
 
         return {
           title: header,
@@ -710,7 +709,7 @@ export const useCreateTable = () => {
   const checkSubgroupKeys = (groupedData: GroupedData): boolean => {
     const keysSet: Set<string> = new Set();
 
-    function traverse(data: GroupedData | ILineItem[]): boolean {
+    const traverse = (data: GroupedData | ILineItem[]): boolean => {
       if (Array.isArray(data)) {
         // 배열은 중복 검사의 대상이 아니므로 false 반환
         return false;
@@ -739,7 +738,7 @@ export const useCreateTable = () => {
 
         return hasDuplicateKeys;
       }
-    }
+    };
 
     return traverse(groupedData);
   };

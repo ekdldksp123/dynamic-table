@@ -76,7 +76,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const { columns, rows } = useMemo(() => {
     // 행열이 정의 되어있지 않은 경우
     if (!colGroup.length && !rowGroup.length && lineItems.length) {
-      return getBasicGridData({ headers, lineItems, lineItemGroups });
+      return getBasicGridData({ headers, lineItems, lineItemGroups, showBaseTotal, showRowsTotal });
     }
 
     // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
