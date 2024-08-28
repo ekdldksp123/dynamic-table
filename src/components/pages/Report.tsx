@@ -2,7 +2,7 @@
 import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ReportProps } from '@/routes/reports/$reportId';
+import { ReportProps } from '@/routes/$reportId';
 import { v4 as uuidv4 } from 'uuid';
 import update from 'immutability-helper';
 import { VscDiffAdded, VscDiffRemoved } from 'react-icons/vsc';

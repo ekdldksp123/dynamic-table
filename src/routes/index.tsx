@@ -4,7 +4,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { IReportConfig } from '@/types';
 import { getAllReports } from '@/libs/api';
 
-export const Route = createFileRoute('/reports/')({
+export const Route = createFileRoute('/')({
   loader: async () => await getAllReports(),
   component: () => <Reports route={Route} />,
 });
@@ -15,7 +15,6 @@ interface ReportsProps {
 
 const Reports: FC<ReportsProps> = ({ route }) => {
   const navigate = useNavigate();
-
   const reports: IReportConfig[] = route.useLoaderData();
 
   return (

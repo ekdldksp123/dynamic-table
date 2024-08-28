@@ -489,6 +489,8 @@ export const useCreateTable = () => {
         const showSubtotalGroups = colGroup.filter((group) => group.showTotal === true);
         const subtotals = calculateColGroupSubtotals(groupedColumnData);
 
+        console.log({ subtotals });
+
         if (showSubtotalGroups.length) {
           const hasDuplicateKeys = checkSubgroupKeys(groupedColumnData);
 

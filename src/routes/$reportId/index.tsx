@@ -3,7 +3,7 @@ import { getReportById } from '@/libs/api';
 import { GroupStateProvider } from '@/shared/groupState.provider';
 import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/reports/$reportId/')({
+export const Route = createFileRoute('/$reportId/')({
   loader: async ({ params }) => await getReportById(params.reportId),
   component: () => (
     <GroupStateProvider>
