@@ -30,11 +30,7 @@ const Reports: FC<ReportsProps> = ({ route }) => {
       </TableHeader>
       <TableBody>
         {reports.map((report) => (
-          <TableRow
-            key={report.id}
-            className='cursor-pointer'
-            onClick={() => navigate({ to: `/reports/${report.id}` })}
-          >
+          <TableRow key={report.id} className='cursor-pointer' onClick={() => navigate({ to: `/${report.id}` })}>
             <TableCell className='font-medium'>{report.id}</TableCell>
             <TableCell>{report.name}</TableCell>
             <TableCell>{report.created_at ?? Date.now()}</TableCell>
