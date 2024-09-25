@@ -14,7 +14,7 @@ export interface ILineItemGroup {
   level?: number;
   type?: GroupType;
   showTotal: boolean;
-  index: number;
+  index?: number;
 }
 
 export type LineItemKey = keyof ILineItem;
@@ -41,4 +41,7 @@ export type GridGroup = {
   items?: ILineItem[];
 };
 
-// export in
+export type GridData = {
+  division?: string;
+  [key: string]: ItemValueType;
+};
