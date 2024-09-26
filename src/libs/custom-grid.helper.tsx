@@ -8,11 +8,6 @@ import {
   LineItemKey,
 } from '@/types/create-table.v2';
 
-export const getColSpan = (column: GridColumn): number => {
-  if (!column.children) return 1;
-  return column.children.reduce((span, child) => span + getColSpan(child), 0);
-};
-
 export const getMaxDepth = (columns: GridColumn[]): number => {
   return columns.reduce((depth, column) => {
     if (column.children) {
@@ -351,4 +346,25 @@ export const getGroupedData = ({ rows, columns, values }: IGetGroupedData) => {
     recur(group);
   }
   return data;
+};
+
+export const amountToLocaleString = (amount: number) => {
+  return amount.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+};
+
+export const getRowSpan = (row: GridGroup): number => {
+  if (!row.children || !row.children.length) return 1;
+  return row.children.reduce((depth, child) => depth + getRowSpan(child), 0);
+};
+
+export const getColSpan = (col: GridGroup, idx: number, rowMaxDepth: number): number => {
+  if (!col.children || !col.children.length) {
+    if (idx === 0 && rowMaxDepth > 1) {
+      return rowMaxDepth;
+    }
+    return 1;
+  }
+  return col.children.reduce((depth, child, index) => depth + getColSpan(child, index, rowMaxDepth), 0);
 };
