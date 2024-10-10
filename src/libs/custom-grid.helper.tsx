@@ -304,9 +304,10 @@ interface IGetGroupedData {
   rows: GridGroup[];
   columns: Record<string, ILineItem[]>;
   values: string[];
+  valueIsColumn?: boolean;
 }
 
-export const getGroupedData = ({ rows, columns, values }: IGetGroupedData) => {
+export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }: IGetGroupedData) => {
   const data: GridData[] = [];
   const columnKeys = Object.keys(columns);
 
@@ -319,15 +320,37 @@ export const getGroupedData = ({ rows, columns, values }: IGetGroupedData) => {
       const row: GridData = { division: key };
 
       if (columnKeys.length) {
-        for (const colKey of columnKeys) {
-          const colItems = columns[colKey];
-          for (const valueKey of values) {
-            row[colKey] = items
-              ?.filter(({ id }) => colItems.find((item) => id === item.id))
-              .reduce((sum, cur) => {
+        //열이 하나고 값이 여러개인 경우 colGroup 1, valueGroup N
+        if (valueIsColumn) {
+          for (const colKey of columnKeys) {
+            const colItems = columns[colKey];
+            const valueItems = colItems.filter(({ id }) => (items ?? []).find((item) => id === item.id));
+            const valueKey = colKey.split('_').pop() ?? '';
+
+            const value = valueItems.reduce((sum, cur) => {
+              const value = Number(cur[valueKey]);
+              return sum + (Number.isNaN(value) ? 0 : value);
+            }, 0);
+            row[colKey] = value;
+          }
+        } else {
+          let total = 0;
+          for (const colKey of columnKeys) {
+            const colItems = columns[colKey];
+            for (const valueKey of values) {
+              const valueItems = colItems.filter(({ id }) => (items ?? []).find((item) => id === item.id));
+              const value = valueItems.reduce((sum, cur) => {
                 const value = Number(cur[valueKey]);
                 return sum + (Number.isNaN(value) ? 0 : value);
               }, 0);
+
+              if (colKey === 'col_total') {
+                row[colKey] = total;
+              } else {
+                row[colKey] = value;
+                total += value;
+              }
+            }
           }
         }
       } else {
@@ -342,6 +365,7 @@ export const getGroupedData = ({ rows, columns, values }: IGetGroupedData) => {
     }
   };
 
+  // 행을 기준으로 열 데이터 맵핑
   for (const group of rows) {
     recur(group);
   }

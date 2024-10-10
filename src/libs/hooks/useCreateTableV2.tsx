@@ -33,6 +33,11 @@ interface IGetPivotGridData extends IGetGridData {
   showRowsTotal: boolean;
 }
 
+interface IGetTableData extends IGetPivotGridData {
+  fieldHeaders?: string[];
+  groupHeaders?: ILineItemGroup[];
+}
+
 export const useCreateTableV2 = () => {
   const getBasicGridData = ({ fieldHeaders, groupHeaders, lineItems, amountUnit }: IGetBasicGridData) => {
     if (!fieldHeaders.length) {
@@ -151,39 +156,61 @@ export const useCreateTableV2 = () => {
       lineItems,
       minRowGroup.id,
     );
+    const values = valueGroup.map(({ id }) => id);
 
-    if (valueGroup.length === 1) {
-      const values = valueGroup.map(({ id }) => id);
-      const { gridGroups: columns, columnsKeyValueMap } = transformToGridGroup({
-        groupedData: groupedColData,
-        groups: colGroup,
-        showTotal: showColsTotal,
-        minGroupValues: colMinGroupValues,
-        lineItemsMap: colMinGroupLineItemsMap,
-        axis: 'col',
-        values,
-      });
+    const { gridGroups: columns, columnsKeyValueMap } = transformToGridGroup({
+      groupedData: groupedColData,
+      groups: colGroup,
+      showTotal: showColsTotal,
+      minGroupValues: colMinGroupValues,
+      lineItemsMap: colMinGroupLineItemsMap,
+      axis: 'col',
+      values,
+    });
 
-      columns.unshift(getFirstColumn(rowGroup[0]));
+    columns.unshift(getFirstColumn(rowGroup[0]));
 
-      const { gridGroups: rows } = transformToGridGroup({
-        groupedData: groupedRowData,
-        groups: rowGroup,
-        showTotal: showRowsTotal,
-        minGroupValues: rowMinGroupValues,
-        lineItemsMap: rowMinGroupLineItemsMap,
-      });
+    const { gridGroups: rows } = transformToGridGroup({
+      groupedData: groupedRowData,
+      groups: rowGroup,
+      showTotal: showRowsTotal,
+      minGroupValues: rowMinGroupValues,
+      lineItemsMap: rowMinGroupLineItemsMap,
+    });
 
-      const data = getGroupedData({ rows, columns: columnsKeyValueMap, values });
+    const data = getGroupedData({ rows, columns: columnsKeyValueMap, values });
 
-      return {
-        columns,
-        rows,
-        data: getDataCountedInGivenUnits(data, amountUnit),
-      };
-    }
-    return { columns: [], rows: [], data: [] };
+    return {
+      columns,
+      rows,
+      data: getDataCountedInGivenUnits(data, amountUnit),
+    };
   };
 
-  return { getBasicGridData, getOnlyRowGroupGridData, getPivotGridData };
+  const getTableData = ({
+    lineItems,
+    colGroup,
+    rowGroup,
+    valueGroup,
+    amountUnit,
+    showRowsTotal,
+    showColsTotal,
+    fieldHeaders = [],
+    groupHeaders = [],
+  }: IGetTableData) => {
+    //행열값이 정의되어 있지 않은 경우
+    if (!colGroup.length && !rowGroup.length && !valueGroup.length && lineItems.length) {
+      return getBasicGridData({ lineItems, fieldHeaders, groupHeaders, amountUnit });
+    }
+
+    if (!colGroup.length && rowGroup.length && valueGroup.length && lineItems.length) {
+      return getOnlyRowGroupGridData({ lineItems, rowGroup, valueGroup, showRowsTotal, amountUnit });
+    }
+
+    if (colGroup.length && rowGroup.length && valueGroup.length && lineItems.length) {
+      return getPivotGridData({ lineItems, colGroup, rowGroup, valueGroup, showColsTotal, showRowsTotal, amountUnit });
+    }
+  };
+
+  return { getTableData };
 };
