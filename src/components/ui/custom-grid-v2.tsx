@@ -107,7 +107,29 @@ export const Grid: FC<GridProps> = ({ columns, rows, data }) => {
     if (rows.length) {
       return rows.flatMap((row) => renderRow(row, 0));
     }
-  }, [rows, renderRow]);
+
+    return data.map((row) => {
+      const values = Object.values(row);
+      return (
+        <tr key={uuidv4()}>
+          {values.map((v) => {
+            const isNumber = typeof v === 'number';
+
+            return (
+              <td
+                key={uuidv4()}
+                className={classNames('px-4 py-2 bg-[#EDF0FE] font-normal border-r border-b border-white', {
+                  '!text-right': isNumber,
+                })}
+              >
+                {isNumber ? amountToLocaleString(v) : v}
+              </td>
+            );
+          })}
+        </tr>
+      );
+    });
+  }, [rows, renderRow, data]);
 
   const renderHeaders = useCallback(() => {
     const headerRows: ReactNode[][] = [];
