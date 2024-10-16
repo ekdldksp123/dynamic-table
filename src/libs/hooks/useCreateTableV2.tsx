@@ -130,6 +130,10 @@ export const useCreateTableV2 = () => {
     showRowsTotal,
     amountUnit,
   }: IGetPivotGridData) => {
+    colGroup = colGroup.map((g, i) => {
+      g.index = i;
+      return g;
+    });
     rowGroup = rowGroup.map((g, i) => {
       g.index = i;
       return g;

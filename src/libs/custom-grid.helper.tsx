@@ -231,6 +231,20 @@ export const transformToGridGroup = ({
             children.push(subtotalGroup);
           }
           groupDef.children = children as GridGroup[];
+        } else if (axis === 'col' && values?.length) {
+          groupDef.children = [];
+          groupDef.items = undefined;
+          for (const valueKey of values) {
+            const currentKey = `${currentName}_${valueKey}`;
+            const items = (Array.isArray(data[key]) ? data[key] : []) as unknown as ILineItem[];
+            columnsKeyValueMap[currentKey] = items;
+            groupDef.children.push({
+              title: valueKey,
+              key: currentKey,
+              index,
+              items,
+            });
+          }
         }
         return groupDef;
       });
