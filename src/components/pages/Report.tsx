@@ -1,32 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Dispatch, FC, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ReportProps } from '@/routes/$reportId';
 import { v4 as uuidv4 } from 'uuid';
 import update from 'immutability-helper';
-import { VscDiffAdded, VscDiffRemoved } from 'react-icons/vsc';
+import { VscDiffRemoved } from 'react-icons/vsc';
 
 import { GroupCard } from '../ui/card';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { CheckboxGroup } from '../ui/checkbox';
-import { useCreateTable } from '@/libs/hooks/useCreateTable';
-import { CustomGrid } from '../ui/custom-grid';
 import classNames from 'classnames';
-import { updateReportById } from '@/libs/api';
 import { ILineItem, ILineItemGroup, IReportConfig, ItemValueType } from '@/types';
 import { useGroupState } from '@/shared/groupState.provider';
+import { DraggableCardList } from '../ui/draggable';
+import { Grid } from '../ui/custom-grid-v2';
 
 const EXCLUDE_VALUES = ['전기', '전기말'];
 
@@ -40,9 +27,8 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
-  const [showBaseTotal, setShowBaseTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
-  const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
+  // const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
 
   const fieldHeaders = useMemo(() => {
     if (lineItems.length) {
@@ -64,52 +50,52 @@ export const Report: FC<ReportProps> = ({ route }) => {
     }
   }, [lineItems]);
 
-  const headers = useMemo(
-    () =>
-      Object.keys(report.itemsDisplayInfo)
-        .filter((key) => report.itemsDisplayInfo[key] !== false && key.length < 30)
-        .map((key) => `${key.charAt(0).toUpperCase()}${key.slice(1)}`),
+  // const headers = useMemo(
+  //   () =>
+  //     Object.keys(report.itemsDisplayInfo)
+  //       .filter((key) => report.itemsDisplayInfo[key] !== false && key.length < 30)
+  //       .map((key) => `${key.charAt(0).toUpperCase()}${key.slice(1)}`),
 
-    [report.itemsDisplayInfo],
-  );
+  //   [report.itemsDisplayInfo],
+  // );
 
-  const { columns, rows } = useMemo(() => {
-    // 행열이 정의 되어있지 않은 경우
-    if (!colGroup.length && !rowGroup.length && lineItems.length) {
-      return getBasicGridData({ headers, lineItems, lineItemGroups, showBaseTotal, showRowsTotal });
-    }
+  // const { columns, rows } = useMemo(() => {
+  //   // 행열이 정의 되어있지 않은 경우
+  //   if (!colGroup.length && !rowGroup.length && lineItems.length) {
+  //     return getBasicGridData({ headers, lineItems, lineItemGroups, showRowsTotal });
+  //   }
 
-    // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
-    if (!colGroup.length && rowGroup.length && lineItems.length) {
-      return getOnlyRowGroupGridData({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal, showBaseTotal });
-    }
+  //   // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
+  //   if (!colGroup.length && rowGroup.length && lineItems.length) {
+  //     return getOnlyRowGroupGridData({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal });
+  //   }
 
-    // 피봇 테이블 o
-    if (colGroup.length && rowGroup.length && lineItems.length) {
-      return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal, showBaseTotal });
-    }
-    return {
-      columns: [],
-      rows: [],
-    };
-  }, [
-    colGroup,
-    rowGroup,
-    lineItems,
-    getBasicGridData,
-    headers,
-    lineItemGroups,
-    getOnlyRowGroupGridData,
-    showRowsTotal,
-    showBaseTotal,
-    getPivotGridData,
-    showColsTotal,
-  ]);
+  //   // 피봇 테이블 o
+  //   if (colGroup.length && rowGroup.length && lineItems.length) {
+  //     return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
+  //   }
+  //   return {
+  //     columns: [],
+  //     rows: [],
+  //   };
+  // }, [
+  //   colGroup,
+  //   rowGroup,
+  //   lineItems,
+  //   getBasicGridData,
+  //   headers,
+  //   lineItemGroups,
+  //   getOnlyRowGroupGridData,
+  //   showRowsTotal,
+  //   showBaseTotal,
+  //   getPivotGridData,
+  //   showColsTotal,
+  // ]);
 
-  const disableShowBaseTotal = useMemo(
-    () => lineItems[0].base.length <= 1 || !columns[1].children,
-    [columns, lineItems],
-  );
+  // const disableShowBaseTotal = useMemo(
+  //   () => lineItems[0].base.length <= 1 || !columns[1].children,
+  //   [columns, lineItems],
+  // );
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -397,30 +383,36 @@ export const Report: FC<ReportProps> = ({ route }) => {
   }, [lineItemGroups]);
 
   const onSaveHandler = useCallback(async () => {
-    const newReport = {
-      items: lineItems,
-      groups: lineItemGroups,
-      colGroup,
-      rowGroup,
-      showRowsTotal,
-      showColsTotal,
-      showBaseTotal,
-    };
-    try {
-      await updateReportById(report.id, newReport);
-      alert('report config saved!');
-    } catch (error) {
-      alert(`failed to save report config :: ${(error as Error).message}`);
-    }
-  }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showBaseTotal, showColsTotal, showRowsTotal]);
+    // const newReport = {
+    //   items: lineItems,
+    //   groups: lineItemGroups,
+    //   colGroup,
+    //   rowGroup,
+    //   showRowsTotal,
+    //   showColsTotal,
+    //   showBaseTotal,
+    // };
+    // try {
+    //   await updateReportById(report.id, newReport);
+    //   alert('report config saved!');
+    // } catch (error) {
+    //   alert(`failed to save report config :: ${(error as Error).message}`);
+    // }
+  }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showColsTotal, showRowsTotal]);
 
   const renderRowGroups = useMemo(
-    () => lineItemGroups.filter((g) => g.axis === 'row').map((col, i) => renderRow(col, i)),
-    [lineItemGroups, renderRow],
+    () =>
+      rowGroup.length
+        ? rowGroup.map((row, i) => renderRow(row, i))
+        : lineItemGroups.filter((g) => g.axis === 'row').map((col, i) => renderRow(col, i)),
+    [lineItemGroups, renderRow, rowGroup],
   );
   const renderColGroups = useMemo(
-    () => lineItemGroups.filter((g) => g.axis === 'column').map((col, i) => renderColumn(col, i)),
-    [lineItemGroups, renderColumn],
+    () =>
+      colGroup.length
+        ? colGroup.map((row, i) => renderColumn(row, i))
+        : lineItemGroups.filter((g) => g.axis === 'column').map((col, i) => renderColumn(col, i)),
+    [lineItemGroups, renderColumn, colGroup],
   );
 
   useEffect(() => {
@@ -571,10 +563,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 children={renderColGroups}
                 showTotal={showColsTotal}
                 setShowTotal={setShowColsTotal}
-                disableShowBaseTotal={disableShowBaseTotal}
-                showBaseTotal={showBaseTotal}
-                setShowBaseTotal={setShowBaseTotal}
-                // separateGroups={separateGroups}
               />
             </div>
           </section>
@@ -583,101 +571,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
           <p className='mt-5 text-lg font-bold'>Preview</p>
           <p className='absolute right-0 text-md font-medium'>Unit (1,000 won)</p>
         </div>
-        <CustomGrid columns={columns} rows={rows} numOfRowGroups={rowGroup.length} />
+        {/* <CustomGrid columns={columns} rows={rows} numOfRowGroups={rowGroup.length} /> */}
+        <Grid columns={[]} rows={[]} data={[]} />
       </div>
     </div>
-  );
-};
-
-interface DraggableCardListProps {
-  title: string;
-  children: ReactNode[];
-  groups: ILineItemGroup[];
-  setGroups: Dispatch<SetStateAction<ILineItemGroup[]>>;
-  showTotal: CheckedState;
-  setShowTotal: (state: CheckedState) => void;
-  showBaseTotal?: CheckedState;
-  setShowBaseTotal?: (state: CheckedState) => void;
-  disableShowBaseTotal?: boolean;
-}
-
-const DraggableCardList: FC<DraggableCardListProps> = ({
-  title,
-  children,
-  groups,
-  setGroups,
-  showTotal,
-  setShowTotal,
-  disableShowBaseTotal,
-  showBaseTotal,
-  setShowBaseTotal,
-}) => {
-  const [target, setTarget] = useState<string>();
-  const onAddHandler = useCallback(() => {
-    if (!target) return;
-
-    const targetIndex = groups.findIndex((g) => g.groupId === target);
-
-    if (targetIndex === -1) return;
-    const targetGroup = { ...groups[targetIndex] };
-
-    targetGroup.axis = title === 'Row' ? 'row' : 'column';
-    setGroups((prev) => {
-      prev[targetIndex] = targetGroup;
-      return [...prev];
-    });
-  }, [groups, setGroups, target, title]);
-
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <div className='p-3 border rounded'>
-        <div className='mb-3 w-[100%] relative flex items-center'>
-          <p className='text-lg font-bold text-center'>{title}</p>
-          <div className='absolute right-0 flex items-center gap-2'>
-            <Select onValueChange={setTarget} value={target}>
-              <SelectTrigger className='w-[150px]'>
-                <SelectValue placeholder={title === 'Row' ? '행을 선택하세요' : '열을 선택하세요'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {groups.length ? (
-                    <>
-                      <SelectLabel>Group</SelectLabel>
-                      {groups.map((group) => (
-                        <SelectItem key={`select_${group.groupId}`} value={group.groupId}>
-                          {group.name}
-                        </SelectItem>
-                      ))}
-                    </>
-                  ) : null}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <VscDiffAdded className='cursor-pointer' onClick={onAddHandler} />
-          </div>
-        </div>
-        <div className='flex flex-col gap-3'>
-          {children}
-          <div className='flex gap-8'>
-            <CheckboxGroup
-              id={title === 'Row' ? 'rowTotal' : 'columnTotal'}
-              label='Show Total'
-              disabled={!children.length}
-              checked={showTotal}
-              onCheckedChange={setShowTotal}
-            />
-            {title === 'Column' && (
-              <CheckboxGroup
-                id='baseTotal'
-                label='Show Base Total'
-                disabled={disableShowBaseTotal}
-                checked={showBaseTotal}
-                onCheckedChange={setShowBaseTotal}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </DndProvider>
   );
 };
