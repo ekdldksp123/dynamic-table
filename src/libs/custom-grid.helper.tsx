@@ -397,12 +397,12 @@ export const getRowSpan = (row: GridGroup): number => {
   return row.children.reduce((depth, child) => depth + getRowSpan(child), 0);
 };
 
-export const getColSpan = (col: GridGroup, idx: number, rowMaxDepth: number): number => {
+export const getColSpan = (col: GridGroup, idx: number, depth: number, rowMaxDepth: number): number => {
   if (!col.children || !col.children.length) {
     if (idx === 0 && rowMaxDepth > 1) {
       return rowMaxDepth;
     }
     return 1;
   }
-  return col.children.reduce((depth, child, index) => depth + getColSpan(child, index, rowMaxDepth), 0);
+  return col.children.reduce((depth, child, index) => depth + getColSpan(child, index, depth + 1, rowMaxDepth), 0);
 };
