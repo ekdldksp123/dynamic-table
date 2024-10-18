@@ -144,7 +144,7 @@ export const Grid: FC<GridProps> = ({ columns, rows, data }) => {
         cols.map((col, idx) => (
           <th
             key={col.key}
-            colSpan={getColSpan(col, idx, rowMaxDepth)}
+            colSpan={getColSpan(col, idx, depth, rowMaxDepth)}
             rowSpan={
               depth === 0 && idx === 0
                 ? colMaxDepth
