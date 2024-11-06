@@ -39,6 +39,8 @@ export type GridGroup = {
   index?: number;
   children?: GridGroup[];
   items?: ILineItem[];
+  order?: number;
+  colSpan?: number;
 };
 
 export type GridData = {

@@ -8,12 +8,6 @@ export interface ILineItemGroup {
   showTotal: boolean;
 }
 export type Axis = 'column' | 'row';
-export interface ILineItem {
-  [key: string]: ItemValueType;
-  base: string[];
-  customFields?: string[];
-  value?: number; //LTD (Base) - 당기, 당기말
-}
 
 export type LineItemKey = keyof ILineItem;
 
@@ -24,6 +18,13 @@ export interface ILineItemColumnDisplayOrNot {
 export type ItemValueType = string | string[] | number | boolean | null | undefined;
 
 export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | null | undefined>;
+
+export interface ILineItem {
+  [key: string]: ItemValueType;
+  base: string[];
+  customFields?: string[];
+  value?: number; //LTD (Base) - 당기, 당기말
+}
 
 export type GroupedData = {
   [key: string]: GroupedData | ILineItem[];
