@@ -8,9 +8,10 @@ interface GridProps {
   columns: GridGroup[];
   rows: GridGroup[];
   data: GridData[];
+  amountUnit: string;
 }
 
-export const Grid: FC<GridProps> = ({ columns, rows, data }) => {
+export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
   const colMaxDepth = useMemo(() => getMaxDepth(columns), [columns]);
   const rowMaxDepth = useMemo(() => getMaxDepth(rows), [rows]);
 
@@ -75,7 +76,7 @@ export const Grid: FC<GridProps> = ({ columns, rows, data }) => {
   const renderRow = useCallback(
     (row: GridGroup, depth: number): JSX.Element[] => {
       const rowSpan = getRowSpan(row);
-      const colSpan = row.title === '합계' ? rowMaxDepth - depth - 1 : row.title === '총계' ? rowMaxDepth - depth : 1;
+      const colSpan = row.title === '소계' ? rowMaxDepth - depth - 1 : row.title === '총계' ? rowMaxDepth - depth : 1;
       const children = row.children ?? [];
       const hasChildren = children.length > 0;
 
@@ -175,6 +176,11 @@ export const Grid: FC<GridProps> = ({ columns, rows, data }) => {
 
   return (
     <div className='max-w-[100%] overflow-x-auto'>
+      {amountUnit !== '' ? (
+        <div className='flex items-center justify-end'>
+          <small className='text-[#535151]'>{`(단위: ${amountUnit})`}</small>
+        </div>
+      ) : null}
       <table className='relative min-w-full bg-white whitespace-nowrap'>
         <thead className='w-[100%] bg-[#DCE2F7] font-semibold border-b border-white sticky top-0'>
           {renderHeaders()}
