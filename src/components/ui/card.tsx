@@ -13,7 +13,7 @@ interface GroupCardProps {
   type: GroupType;
   onMoveGroup: (dragIndex: number, hoverIndex: number) => void;
   onRemoveGroup: (id: string, type: GroupType) => void;
-  onChangeShowTotal: (index: number, showTotal: CheckedState) => void;
+  onChangeShowTotal?: (index: number, showTotal: CheckedState) => void;
 }
 
 interface DragItem {
@@ -102,12 +102,14 @@ export const GroupCard: FC<GroupCardProps> = ({
     >
       <div>
         {group.name}
-        <CheckboxGroup
-          id={group.id}
-          label='Show Subtotal'
-          checked={group.showTotal}
-          onCheckedChange={(v) => onChangeShowTotal(index, v)}
-        />
+        {onChangeShowTotal ? (
+          <CheckboxGroup
+            id={group.id}
+            label='Show Subtotal'
+            checked={group.showTotal}
+            onCheckedChange={(v) => onChangeShowTotal(index, v)}
+          />
+        ) : null}
       </div>
       <CiSquareRemove
         className='absolute right-3 w-[20px] h-[20px] cursor-pointer'

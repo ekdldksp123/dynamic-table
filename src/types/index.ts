@@ -1,6 +1,6 @@
 import { CheckedState } from '@radix-ui/react-checkbox';
 
-export interface ILineItemGroup {
+interface ILineItemGroup {
   groupId: string;
   name: string;
   level: number;

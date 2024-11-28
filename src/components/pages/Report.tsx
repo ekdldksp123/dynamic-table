@@ -10,10 +10,18 @@ import { VscDiffRemoved } from 'react-icons/vsc';
 import { GroupCard } from '../ui/card';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import classNames from 'classnames';
-import { ILineItem, ILineItemGroup, IReportConfig, ItemValueType } from '@/types';
-import { useGroupState } from '@/shared/groupState.provider';
+import {
+  GridData,
+  GridGroup,
+  GroupType,
+  ILineItem,
+  ILineItemGroup,
+  IReportConfig,
+  ItemValueType,
+} from '@/types/create-table.v2';
 import { DraggableCardList } from '../ui/draggable';
 import { Grid } from '../ui/custom-grid-v2';
+import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
 
 const EXCLUDE_VALUES = ['전기', '전기말'];
 
@@ -21,14 +29,17 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
 
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
+  const [allLineItems, setAllLineItems] = useState<ILineItem[]>();
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
-  const { colGroup, setColGroup, rowGroup, setRowGroup } = useGroupState();
+  const [colGroup, setColGroup] = useState<ILineItemGroup[]>([...report.colGroup]);
+  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([...report.rowGroup]);
+  const [valueGroup, setValueGroup] = useState<ILineItemGroup[]>([...report.valueGroup]);
 
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
-  // const { getBasicGridData, getPivotGridData, getOnlyRowGroupGridData } = useCreateTable();
+  const { getTableData } = useCreateTableV2();
 
   const fieldHeaders = useMemo(() => {
     if (lineItems.length) {
@@ -127,18 +138,50 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [rowGroup, setRowGroup],
   );
 
-  const removeFromRowOrColGroup = useCallback(
-    (groupId: string) =>
-      setLineItemsGroups((prev) =>
-        prev.map((group) => {
-          if (group.groupId === groupId) {
-            group.axis = undefined;
-            return group;
-          }
-          return group;
+  const moveValueGroup = useCallback(
+    (dragIndex: number, hoverIndex: number) => {
+      const dragGroup = valueGroup[dragIndex];
+      setValueGroup(
+        update(valueGroup, {
+          $splice: [
+            [dragIndex, 1],
+            [hoverIndex, 0, dragGroup],
+          ],
         }),
-      ),
-    [setLineItemsGroups],
+      );
+    },
+    [valueGroup, setValueGroup],
+  );
+
+  const removeFromGroups = useCallback(
+    (id: string, axis: GroupType) => {
+      switch (axis) {
+        case 'row':
+          setRowGroup((prev) => prev.filter((group) => group.id !== id));
+          break;
+        case 'column':
+          setColGroup((prev) => prev.filter((group) => group.id !== id));
+          break;
+        case 'value':
+          setValueGroup((prev) => prev.filter((group) => group.id !== id));
+          break;
+        default:
+          break;
+      }
+
+      if (lineItemGroups.find((group) => group.id === id)) {
+        setLineItemsGroups((prev) =>
+          prev.map((group) => {
+            if (group.id === id && group.type) {
+              group.type = undefined;
+              return group;
+            }
+            return group;
+          }),
+        );
+      }
+    },
+    [lineItemGroups],
   );
 
   const onChangeRowShowTotal = useCallback(
@@ -152,7 +195,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
       });
 
       const groupLevel = rowGroup[index].level;
-      const maxGroupLevel = Math.max(...rowGroup.map((g) => g.level));
+      const maxGroupLevel = Math.max(...rowGroup.map((g) => g.level ?? -1));
       if (groupLevel === maxGroupLevel) {
         setShowRowsTotal(showTotal);
       }
@@ -183,193 +226,68 @@ export const Report: FC<ReportProps> = ({ route }) => {
     (group: ILineItemGroup, index: number) => {
       return (
         <GroupCard
-          key={`row-${group.groupId}`}
+          key={`row-${group.id}`}
           id={uuidv4()}
           group={group}
           index={index}
           onMoveGroup={moveRowGroup}
-          onRemoveGroup={removeFromRowOrColGroup}
+          onRemoveGroup={removeFromGroups}
           onChangeShowTotal={onChangeRowShowTotal}
+          type='row'
         />
       );
     },
-    [moveRowGroup, onChangeRowShowTotal, removeFromRowOrColGroup],
+    [moveRowGroup, onChangeRowShowTotal, removeFromGroups],
   );
 
   const renderColumn = useCallback(
     (group: ILineItemGroup, index: number) => {
       return (
         <GroupCard
-          key={`col-${group.groupId}`}
+          key={`col-${group.id}`}
           id={uuidv4()}
           group={group}
           index={index}
           onMoveGroup={moveColGroup}
-          onRemoveGroup={removeFromRowOrColGroup}
+          onRemoveGroup={removeFromGroups}
           onChangeShowTotal={onChangeColShowTotal}
+          type='column'
         />
       );
     },
-    [moveColGroup, onChangeColShowTotal, removeFromRowOrColGroup],
+    [moveColGroup, onChangeColShowTotal, removeFromGroups],
+  );
+
+  const renderValue = useCallback(
+    (group: ILineItemGroup, index: number) => {
+      return (
+        <GroupCard
+          key={`value-${group.id}`}
+          id={uuidv4()}
+          group={group}
+          index={index}
+          onMoveGroup={moveValueGroup}
+          onRemoveGroup={removeFromGroups}
+          type='column'
+        />
+      );
+    },
+    [moveValueGroup, removeFromGroups],
   );
 
   const onAddGroup = useCallback(() => {
-    const groupId = uuidv4();
+    const id = uuidv4();
     const newItem: ILineItemGroup = {
-      groupId,
+      id,
       name: `Group ${lineItemGroups.length + 1}`,
       level: lineItemGroups.length + 1,
       showTotal: false,
     };
     setLineItemsGroups((prev) => [...prev, newItem]);
-
-    switch (report.name) {
-      case '주석 10_01':
-        setLineItems((prev) =>
-          prev.map((item, i) => {
-            item[groupId] =
-              lineItemGroups.length === 0
-                ? (item.name as string | undefined)?.split('_')[0]
-                : lineItemGroups.length === 1
-                  ? item.name === prev[i - 1]?.name
-                    ? '부채'
-                    : '자산'
-                  : (item.name as string | undefined)?.split('_')[1] === '매매'
-                    ? '매매목적'
-                    : '위험회피목적';
-            return item;
-          }),
-        );
-        break;
-      case '주석 31_01':
-        setLineItems((prev) =>
-          prev.map((item, i) => {
-            if (lineItemGroups.length === 0) {
-              if (item.code === '602000000' || item.code === '704000000') {
-                item[groupId] = '기타';
-              } else if (item.code === '520010000') {
-                item[groupId] = '관계∙종속기업손상차손';
-              } else if (item.code === '707000000') {
-                item[groupId] = '과징금';
-              } else {
-                item[groupId] = item.name;
-              }
-            } else if (lineItemGroups.length === 1) {
-              item[groupId] = i < 3 ? '영업외수익' : '영업외비용';
-            }
-            return item;
-          }),
-        );
-        break;
-      case '주석 28_01':
-        setLineItems((prev) =>
-          prev.map((item) => {
-            if (lineItemGroups.length === 0) {
-              if (item.code === '52310') {
-                item[groupId] = '급여';
-              } else if (item.code === '52330') {
-                item[groupId] = '복리후생비';
-              } else if (item.code === '52320') {
-                item[groupId] = '특별상여금';
-              } else if (item.code === '52550') {
-                item[groupId] = '세금과공과';
-              } else if (item.code === '52530' || item.code === '55230' || item.code === '56480') {
-                item[groupId] = '지급수수료';
-              } else if (item.code === '52520') {
-                item[groupId] = '전산비';
-              } else if (item.code === '52340') {
-                item[groupId] = '퇴직급여';
-              } else if (item.code === '52560' || item.code === '56100') {
-                item[groupId] = '감가상각비';
-              } else {
-                item[groupId] = '기타';
-              }
-            }
-
-            return item;
-          }),
-        );
-        break;
-      case '주석 06_01':
-        setLineItems((prev) =>
-          prev.map((item) => {
-            if (lineItemGroups.length === 0) {
-              switch (item.code) {
-                case '1132000100':
-                case '1182003601':
-                case '1182004000':
-                  item[groupId] = '주식';
-                  break;
-                case '1182000400':
-                case '1182006100':
-                case '1182102103':
-                  item[groupId] = '출자금';
-                  break;
-                case '1113002100':
-                case '1113002300':
-                case '1113003400':
-                case '1113004200':
-                  item[groupId] = '국공채';
-                  break;
-                case '1113002303':
-                case '1114000100':
-                case '1115002004':
-                case '1115004004':
-                  item[groupId] = '특수채';
-                  break;
-                case '1113002002':
-                  item[groupId] = '금융채';
-                  break;
-                case '1112000100':
-                case '1123102000':
-                case '1123103000':
-                case '1123105000':
-                  item[groupId] = '회사채';
-                  break;
-                case '1182002000':
-                case '1182003000':
-                case '1182003200':
-                case '1183100400':
-                  item[groupId] = '수익증권';
-                  break;
-                default:
-                  item[groupId] = '외화유가증권';
-                  break;
-              }
-            } else if (lineItemGroups.length === 1) {
-              switch (item.code) {
-                case '1132000100':
-                case '1182003601':
-                case '1182004000':
-                case '1182000400':
-                case '1182006100':
-                case '1182102103':
-                  item[groupId] = '지분상품';
-                  break;
-                default:
-                  item[groupId] = '채무상품';
-                  break;
-              }
-            } else if (lineItemGroups.length === 2) {
-              item[groupId] = '장부금액';
-            }
-            return item;
-          }),
-        );
-        break;
-      default:
-        setLineItems((prev) =>
-          prev.map((item) => {
-            item[groupId] = null;
-            return item;
-          }),
-        );
-        break;
-    }
-  }, [lineItemGroups.length, report.name]);
+  }, [lineItemGroups.length]);
 
   const deleteGroup = useCallback(() => {
-    const lastKey = lineItemGroups[lineItemGroups.length - 1].groupId;
+    const lastKey = lineItemGroups[lineItemGroups.length - 1].id;
     setLineItemsGroups((prev) => {
       return prev.slice(0, -1);
     });
@@ -404,25 +322,52 @@ export const Report: FC<ReportProps> = ({ route }) => {
     () =>
       rowGroup.length
         ? rowGroup.map((row, i) => renderRow(row, i))
-        : lineItemGroups.filter((g) => g.axis === 'row').map((col, i) => renderRow(col, i)),
+        : lineItemGroups.filter((g) => g.type === 'row').map((row, i) => renderRow(row, i)),
     [lineItemGroups, renderRow, rowGroup],
   );
   const renderColGroups = useMemo(
     () =>
       colGroup.length
-        ? colGroup.map((row, i) => renderColumn(row, i))
-        : lineItemGroups.filter((g) => g.axis === 'column').map((col, i) => renderColumn(col, i)),
+        ? colGroup.map((col, i) => renderColumn(col, i))
+        : lineItemGroups.filter((g) => g.type === 'column').map((col, i) => renderColumn(col, i)),
     [lineItemGroups, renderColumn, colGroup],
   );
+
+  const renderValueGroups = useMemo(
+    () =>
+      valueGroup.length
+        ? valueGroup.map((col, i) => renderValue(col, i))
+        : lineItemGroups.filter((g) => g.type === 'value').map((col, i) => renderValue(col, i)),
+    [lineItemGroups, renderValue, valueGroup],
+  );
+
+  const [preview, setPreview] = useState<{
+    columns: GridGroup[];
+    rows: GridGroup[];
+    data: GridData[];
+    amountUnit: string;
+  }>();
+
+  const renderGrid = useMemo(() => {
+    return preview?.columns && preview?.rows && preview?.data ? (
+      <Grid columns={preview.columns} rows={preview.rows} data={preview.data} amountUnit={preview.amountUnit} />
+    ) : null;
+  }, [preview]);
+
+  const onClickPreview = useCallback(() => {
+    const { columns, rows, data } = getTableData({
+      // lineItems: allL
+    });
+  }, []);
 
   useEffect(() => {
     if (!report.rowGroup?.length && !report.colGroup?.length) {
       const rows = [];
       const cols = [];
       for (const group of lineItemGroups) {
-        if (group.axis === 'row') {
+        if (group.type === 'row') {
           rows.push(group);
-        } else if (group.axis === 'column') {
+        } else if (group.type === 'column') {
           cols.push(group);
         }
       }
@@ -467,7 +412,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                       </th>
                     ))}
                     {lineItemGroups.map((group, index) => (
-                      <th key={`group-${group.groupId}`} className='bg-gray-200 h-[30px]'>
+                      <th key={`group-${group.id}`} className='bg-gray-200 h-[30px]'>
                         <div className='w-[100%] relative flex items-center gap-2'>
                           <Input
                             type='text'
@@ -476,7 +421,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             value={group.name}
                             onChange={(e) => {
                               setLineItemsGroups((prev) => {
-                                const targetGroup = prev.find((g) => g.groupId === group.groupId);
+                                const targetGroup = prev.find((g) => g.id === group.id);
                                 if (targetGroup) targetGroup.name = e.target.value;
                                 return [...prev];
                               });
@@ -513,10 +458,10 @@ export const Report: FC<ReportProps> = ({ route }) => {
                               </td>
                             );
                           })}
-                          {lineItemGroups.map(({ groupId }) => {
-                            const value = item[groupId] as unknown as Exclude<ItemValueType, boolean>;
+                          {lineItemGroups.map(({ id }) => {
+                            const value = item[id] as unknown as Exclude<ItemValueType, boolean>;
                             return (
-                              <td key={`${item.code}:${groupId}`}>
+                              <td key={`${item.code}:${id}`}>
                                 <Input
                                   value={value || ''}
                                   className='w-[150px]'
@@ -524,7 +469,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                                     setLineItems((prev) => {
                                       return prev.map((item, i) => {
                                         if (i === index) {
-                                          item[groupId] = e.target.value;
+                                          item[id] = e.target.value;
                                         }
                                         return item;
                                       });
@@ -535,7 +480,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                             );
                           })}
                           <td className='px-5'></td>
-                          <td className='px-5'>{item.base.join(', ')}</td>
+                          <td className='px-5'>{item.base ?? ''}</td>
                         </tr>
                       );
                     })}
@@ -551,28 +496,31 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 title='Row'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
-                children={renderRowGroups}
                 showTotal={showRowsTotal}
                 setShowTotal={setShowRowsTotal}
-                // separateGroups={separateGroups}
-              />
+              >
+                {renderRowGroups}
+              </DraggableCardList>
               <DraggableCardList
                 title='Column'
                 groups={lineItemGroups}
                 setGroups={setLineItemsGroups}
-                children={renderColGroups}
                 showTotal={showColsTotal}
                 setShowTotal={setShowColsTotal}
-              />
+              >
+                {renderColGroups}
+              </DraggableCardList>
+              <DraggableCardList title='Value' groups={lineItemGroups} setGroups={setLineItemsGroups}>
+                {renderValueGroups}
+              </DraggableCardList>
             </div>
           </section>
         </section>
-        <div className='w-[100%] h-[50px] relative mb-2'>
-          <p className='mt-5 text-lg font-bold'>Preview</p>
-          <p className='absolute right-0 text-md font-medium'>Unit (1,000 won)</p>
+        <div className='w-[100%] flex items-end justify-between mb-2'>
+          <p className='mt-5 text-lg font-bold'>Report</p>
+          <Button onClick={onClickPreview}>Preview</Button>
         </div>
-        {/* <CustomGrid columns={columns} rows={rows} numOfRowGroups={rowGroup.length} /> */}
-        <Grid columns={[]} rows={[]} data={[]} />
+        {renderGrid}
       </div>
     </div>
   );

@@ -47,3 +47,21 @@ export type GridData = {
   division?: string;
   [key: string]: ItemValueType;
 };
+
+export type TrueOrFalse = 'Y' | 'N';
+
+export interface IReportFormatItem {
+  reportFormatItemUniqueId?: string;
+  reportId?: string;
+  baseYearAndMonth?: string;
+  reportSequenceNumber?: number;
+  reportOrderNumber: number;
+  itemName: string;
+}
+
+export interface IReportFormatItemGroup extends IReportFormatItem {
+  sumTotalYn: TrueOrFalse;
+}
+export interface IReportFormat {
+  reportFormat: IReportFormatInfo;
+}
