@@ -214,6 +214,8 @@ export const useCreateTableV2 = () => {
     if (colGroup.length && rowGroup.length && valueGroup.length && lineItems.length) {
       return getPivotGridData({ lineItems, colGroup, rowGroup, valueGroup, showColsTotal, showRowsTotal, amountUnit });
     }
+
+    return { columns: [], rows: [], data: [], amountUnit };
   };
 
   return { getTableData };

@@ -22,14 +22,12 @@ import {
 import { DraggableCardList } from '../ui/draggable';
 import { Grid } from '../ui/custom-grid-v2';
 import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
-
-const EXCLUDE_VALUES = ['전기', '전기말'];
+import { Select } from '../ui/select';
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
 
   const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
-  const [allLineItems, setAllLineItems] = useState<ILineItem[]>();
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
   const [colGroup, setColGroup] = useState<ILineItemGroup[]>([...report.colGroup]);
@@ -39,74 +37,25 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
 
+  const [amountUnit, setAmountUnit] = useState<number>(1);
+
   const { getTableData } = useCreateTableV2();
 
-  const fieldHeaders = useMemo(() => {
-    if (lineItems.length) {
-      const fieldHeaders = Object.keys(lineItems[0])
-        .filter(
-          (key) =>
-            key !== 'customFields' &&
-            key !== 'value' &&
-            key !== 'base' &&
-            key.length < 20 &&
-            !EXCLUDE_VALUES.includes(key),
-        )
-        .map((key) => {
-          return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`, value: key };
-        });
-      return fieldHeaders;
-    } else {
-      return [];
-    }
-  }, [lineItems]);
+  const fieldHeaders = useMemo(
+    () =>
+      lineItems.length
+        ? Object.keys(lineItems[0]).filter((key) => key !== 'id' && key !== 'base' && key.length < 30)
+        : [],
+    [lineItems],
+  );
 
-  // const headers = useMemo(
-  //   () =>
-  //     Object.keys(report.itemsDisplayInfo)
-  //       .filter((key) => report.itemsDisplayInfo[key] !== false && key.length < 30)
-  //       .map((key) => `${key.charAt(0).toUpperCase()}${key.slice(1)}`),
-
-  //   [report.itemsDisplayInfo],
-  // );
-
-  // const { columns, rows } = useMemo(() => {
-  //   // 행열이 정의 되어있지 않은 경우
-  //   if (!colGroup.length && !rowGroup.length && lineItems.length) {
-  //     return getBasicGridData({ headers, lineItems, lineItemGroups, showRowsTotal });
-  //   }
-
-  //   // 행만 그룹으로 정의되어 있는 경우 + 열이 없어서 당기말, 전기말 표시 필수
-  //   if (!colGroup.length && rowGroup.length && lineItems.length) {
-  //     return getOnlyRowGroupGridData({ headers, rowGroup, lineItems, lineItemGroups, showRowsTotal });
-  //   }
-
-  //   // 피봇 테이블 o
-  //   if (colGroup.length && rowGroup.length && lineItems.length) {
-  //     return getPivotGridData({ lineItems, colGroup, rowGroup, showColsTotal, showRowsTotal });
-  //   }
-  //   return {
-  //     columns: [],
-  //     rows: [],
-  //   };
-  // }, [
-  //   colGroup,
-  //   rowGroup,
-  //   lineItems,
-  //   getBasicGridData,
-  //   headers,
-  //   lineItemGroups,
-  //   getOnlyRowGroupGridData,
-  //   showRowsTotal,
-  //   showBaseTotal,
-  //   getPivotGridData,
-  //   showColsTotal,
-  // ]);
-
-  // const disableShowBaseTotal = useMemo(
-  //   () => lineItems[0].base.length <= 1 || !columns[1].children,
-  //   [columns, lineItems],
-  // );
+  const groupHeaders = useMemo(
+    () =>
+      lineItemGroups.length
+        ? lineItemGroups.filter(({ name }) => name !== 'id' && name !== 'base' && !fieldHeaders.includes(name))
+        : [],
+    [fieldHeaders, lineItemGroups],
+  );
 
   const moveColGroup = useCallback(
     (dragIndex: number, hoverIndex: number) => {
@@ -214,7 +163,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
       });
 
       const groupLevel = colGroup[index].level;
-      const maxGroupLevel = Math.max(...colGroup.map((g) => g.level));
+      const maxGroupLevel = Math.max(...colGroup.map((g) => g.level ?? -1e));
       if (groupLevel === maxGroupLevel) {
         setShowColsTotal(showTotal);
       }
@@ -301,6 +250,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
   }, [lineItemGroups]);
 
   const onSaveHandler = useCallback(async () => {
+    //FIXME
     // const newReport = {
     //   items: lineItems,
     //   groups: lineItemGroups,
@@ -345,20 +295,50 @@ export const Report: FC<ReportProps> = ({ route }) => {
     columns: GridGroup[];
     rows: GridGroup[];
     data: GridData[];
-    amountUnit: string;
+    amountUnit: number;
   }>();
 
   const renderGrid = useMemo(() => {
     return preview?.columns && preview?.rows && preview?.data ? (
-      <Grid columns={preview.columns} rows={preview.rows} data={preview.data} amountUnit={preview.amountUnit} />
+      <Grid
+        columns={preview.columns}
+        rows={preview.rows}
+        data={preview.data}
+        amountUnit={preview.amountUnit.toLocaleString()}
+      />
     ) : null;
   }, [preview]);
 
   const onClickPreview = useCallback(() => {
     const { columns, rows, data } = getTableData({
-      // lineItems: allL
+      lineItems,
+      colGroup,
+      rowGroup,
+      valueGroup,
+      amountUnit,
+      showColsTotal: typeof showColsTotal === 'string' ? false : showColsTotal,
+      showRowsTotal: typeof showRowsTotal === 'string' ? false : showRowsTotal,
+      fieldHeaders,
+      groupHeaders,
     });
-  }, []);
+
+    if (!columns.length) {
+      alert('적합하지 않은 표현식입니다.');
+    } else {
+      setPreview({ columns, rows, data, amountUnit });
+    }
+  }, [
+    amountUnit,
+    colGroup,
+    fieldHeaders,
+    getTableData,
+    groupHeaders,
+    lineItems,
+    rowGroup,
+    showColsTotal,
+    showRowsTotal,
+    valueGroup,
+  ]);
 
   useEffect(() => {
     if (!report.rowGroup?.length && !report.colGroup?.length) {
@@ -407,8 +387,8 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 <thead className='w-[100%]'>
                   <tr>
                     {fieldHeaders.map((header) => (
-                      <th key={`th-${header.label}`} className='bg-gray-200 h-[30px]'>
-                        {header.label}
+                      <th key={`th-${header}`} className='bg-gray-200 h-[30px]'>
+                        {header}
                       </th>
                     ))}
                     {lineItemGroups.map((group, index) => (
@@ -447,7 +427,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                       return (
                         <tr key={`${index}-${item.code}`} className='border-b border-b-double border-b-neutral-200'>
                           {fieldHeaders.map((header) => {
-                            const value = item[header.value];
+                            const value = item[header];
                             return (
                               <td className={classNames('px-5 text-center', value === null && 'italic text-gray-400')}>
                                 {typeof value === 'number'
@@ -513,6 +493,14 @@ export const Report: FC<ReportProps> = ({ route }) => {
               <DraggableCardList title='Value' groups={lineItemGroups} setGroups={setLineItemsGroups}>
                 {renderValueGroups}
               </DraggableCardList>
+              <div className='p-3 w-[100%] flex justify-between'>
+                <p>Amount Unit</p>
+                <Select onValueChange={(v) => setAmountUnit(Number(v))} defaultValue={'1'}>
+                  <option value='10000'>10,000</option>
+                  <option value='1000'>1,000</option>
+                  <option value='1'>1</option>
+                </Select>
+              </div>
             </div>
           </section>
         </section>
