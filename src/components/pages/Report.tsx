@@ -19,6 +19,8 @@ import {
   IReportConfig,
   ItemValueType,
 } from '@/types/create-table.v2';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableCardList } from '../ui/draggable';
 import { Grid } from '../ui/custom-grid-v2';
 import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
@@ -471,37 +473,39 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
           <section className='w-[20%]'>
             <p className='mt-5 text-lg font-bold mb-1'>Edit Table Layout</p>
-            <div className='grid gap-3'>
-              <DraggableCardList
-                title='Row'
-                groups={lineItemGroups}
-                setGroups={setLineItemsGroups}
-                showTotal={showRowsTotal}
-                setShowTotal={setShowRowsTotal}
-              >
-                {renderRowGroups}
-              </DraggableCardList>
-              <DraggableCardList
-                title='Column'
-                groups={lineItemGroups}
-                setGroups={setLineItemsGroups}
-                showTotal={showColsTotal}
-                setShowTotal={setShowColsTotal}
-              >
-                {renderColGroups}
-              </DraggableCardList>
-              <DraggableCardList title='Value' groups={lineItemGroups} setGroups={setLineItemsGroups}>
-                {renderValueGroups}
-              </DraggableCardList>
-              <div className='p-3 w-[100%] flex justify-between'>
-                <p>Amount Unit</p>
-                <Select onValueChange={(v) => setAmountUnit(Number(v))} defaultValue={'1'}>
-                  <option value='10000'>10,000</option>
-                  <option value='1000'>1,000</option>
-                  <option value='1'>1</option>
-                </Select>
+            <DndProvider backend={HTML5Backend}>
+              <div className='grid gap-3'>
+                <DraggableCardList
+                  title='Row'
+                  groups={lineItemGroups}
+                  setGroups={setLineItemsGroups}
+                  showTotal={showRowsTotal}
+                  setShowTotal={setShowRowsTotal}
+                >
+                  {renderRowGroups}
+                </DraggableCardList>
+                <DraggableCardList
+                  title='Column'
+                  groups={lineItemGroups}
+                  setGroups={setLineItemsGroups}
+                  showTotal={showColsTotal}
+                  setShowTotal={setShowColsTotal}
+                >
+                  {renderColGroups}
+                </DraggableCardList>
+                <DraggableCardList title='Value' groups={lineItemGroups} setGroups={setLineItemsGroups}>
+                  {renderValueGroups}
+                </DraggableCardList>
+                <div className='p-3 w-[100%] flex justify-between'>
+                  <p>Amount Unit</p>
+                  <Select onValueChange={(v) => setAmountUnit(Number(v))} defaultValue={'1'}>
+                    <option value='10000'>10,000</option>
+                    <option value='1000'>1,000</option>
+                    <option value='1'>1</option>
+                  </Select>
+                </div>
               </div>
-            </div>
+            </DndProvider>
           </section>
         </section>
         <div className='w-[100%] flex items-end justify-between mb-2'>
