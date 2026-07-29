@@ -1,14 +1,14 @@
-import { GridColumn, GroupedData } from '@/types';
 import {
   GridData,
   GridGroup,
+  GroupedData,
   ILineItem,
   ILineItemGroup,
   KeyTypeFromItemValue,
   LineItemKey,
 } from '@/types/create-table.v2';
 
-export const getMaxDepth = (columns: GridColumn[]): number => {
+export const getMaxDepth = (columns: GridGroup[]): number => {
   return columns.reduce((depth, column) => {
     if (column.children) {
       return Math.max(depth, getMaxDepth(column.children) + 1);

@@ -31,7 +31,17 @@ export interface IReportConfig {
   valueGroup: ILineItemGroup[];
   showRowsTotal: boolean;
   showColsTotal: boolean;
+  created_at?: string;
+  writer?: string; // 담당자
 }
+
+/**
+ * `groupByHierarchical`이 만들어내는 중첩 그룹 트리.
+ * 잎(leaf)은 해당 그룹에 속한 line item 배열이다.
+ */
+export type GroupedData = {
+  [key: string]: GroupedData | ILineItem[];
+};
 
 export type GridGroup = {
   title: string;

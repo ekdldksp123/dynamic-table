@@ -1,4 +1,4 @@
-import { GridData, GridGroup, ILineItem, ILineItemGroup } from '@/types/create-table.v2';
+import { GridData, GridGroup, GroupedData, ILineItem, ILineItemGroup } from '@/types/create-table.v2';
 import {
   getDataCountedInGivenUnits,
   getFirstColumn,
@@ -7,7 +7,6 @@ import {
   groupByHierarchical,
   transformToGridGroup,
 } from '../custom-grid.helper';
-import { GroupedData } from '@/types';
 
 interface IGetGridData {
   lineItems: ILineItem[];
