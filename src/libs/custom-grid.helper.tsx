@@ -8,6 +8,8 @@ import {
   LineItemKey,
 } from '@/types/create-table.v2';
 
+import { SEMI_TOTAL_KEY_PREFIX, TOTAL_LABEL, grandTotalKey, semiTotalKey, subtotalKey } from './grid-tokens';
+
 export const getMaxDepth = (columns: GridGroup[]): number => {
   return columns.reduce((depth, column) => {
     if (column.children) {
@@ -165,11 +167,13 @@ export const transformToGridGroup = ({
 
             const subtotalGroup: GridGroup = {
               index: index + 1,
-              key: `${currentName}_subtotal1`,
-              title: '소계',
+              key: subtotalKey(currentName),
+              title: TOTAL_LABEL.subtotal,
               items: !subtotalGroupItems.length
                 ? children.flatMap((child) =>
-                    (child.children ?? []).flatMap((c) => (c.title === '소계' ? [] : (c.items ?? [])) as ILineItem[]),
+                    (child.children ?? []).flatMap(
+                      (c) => (c.title === TOTAL_LABEL.subtotal ? [] : (c.items ?? [])) as ILineItem[],
+                    ),
                   )
                 : subtotalGroupItems,
             };
@@ -213,12 +217,12 @@ export const transformToGridGroup = ({
     );
 
     const groupedSubtotalKeys = Object.keys(groupedSubtotal);
-    const total: GridGroup = { key: `${axis}_total`, title: '총계', items: lineItems };
+    const total: GridGroup = { key: grandTotalKey(axis), title: TOTAL_LABEL.grandTotal, items: lineItems };
 
     if (groupedSubtotalKeys.length > 1) {
-      const children = traverse(groupedSubtotal, 'subtotal');
+      const children = traverse(groupedSubtotal, SEMI_TOTAL_KEY_PREFIX);
 
-      gridGroups.push({ key: `${axis}_semi_total`, title: '합계', children });
+      gridGroups.push({ key: semiTotalKey(axis), title: TOTAL_LABEL.semiTotal, children });
       gridGroups.push(total);
     } else {
       gridGroups.push(total);
