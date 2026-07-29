@@ -163,7 +163,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
       });
 
       const groupLevel = colGroup[index].level;
-      const maxGroupLevel = Math.max(...colGroup.map((g) => g.level ?? -1e));
+      const maxGroupLevel = Math.max(...colGroup.map((g) => g.level ?? -1));
       if (groupLevel === maxGroupLevel) {
         setShowColsTotal(showTotal);
       }
