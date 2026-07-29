@@ -113,6 +113,73 @@ export interface ITransformToGridGroup {
   values?: string[];
 }
 
+/** 그룹 값이 아니라 자료구조의 흔적인 key. 헤더로 만들지 않는다. */
+const isNotAGroupValue = (key: string) => key === 'groupId' || key === 'null' || key === '';
+
+const isLeafOf = (data: GroupedData, key: string) => Array.isArray(data[key]);
+
+const itemsOf = (data: GroupedData, key: string): ILineItem[] =>
+  isLeafOf(data, key) ? (data[key] as unknown as ILineItem[]) : [];
+
+/**
+ * 같은 제목이 여러 자리에 나타날 수 있으므로, 제목이 등장한 자리들 중 가장 큰
+ * RN 을 그 제목의 순서로 본다.
+ */
+const orderOf = (title: string, groupsOrderMap: Record<string, number>): number => {
+  const orders = Object.keys(groupsOrderMap)
+    .filter((key) => key.includes(title))
+    .map((key) => groupsOrderMap[key])
+    .sort((x, y) => y - x);
+
+  return orders[0];
+};
+
+const byGroupOrder =
+  (groupsOrderMap: Record<string, number>) =>
+  (a: GridGroup, b: GridGroup): number =>
+    orderOf(a.title, groupsOrderMap) - orderOf(b.title, groupsOrderMap);
+
+/**
+ * 자식들을 합친 소계 노드.
+ *
+ * 자식이 이미 잎이면 그 항목들을 그대로 쓰고, 자식이 또 그룹이면 손자에서
+ * 항목을 끌어올린다 — 이때 손자의 소계는 중복이므로 제외한다.
+ */
+const buildSubtotalGroup = ({ currentName, children, index }: SubtotalGroupInput): GridGroup => {
+  const directItems = children.flatMap((child) => child.items ?? []);
+
+  return {
+    index: index + 1,
+    key: subtotalKey(currentName),
+    title: TOTAL_LABEL.subtotal,
+    items: directItems.length
+      ? directItems
+      : children.flatMap((child) =>
+          (child.children ?? []).flatMap((c) => (c.title === TOTAL_LABEL.subtotal ? [] : (c.items ?? [])) as ILineItem[]),
+        ),
+  };
+};
+
+interface SubtotalGroupInput {
+  currentName: string;
+  children: GridGroup[];
+  index: number;
+}
+
+/**
+ * 열 축의 잎 그룹은 값 그룹마다 열을 하나씩 갖는다. 실제 데이터가 들어가는 자리는
+ * 이 잎들이므로 그룹 자신은 items 를 비운다.
+ */
+const expandValueColumns = (groupDef: GridGroup, items: ILineItem[], values: string[], index: number) => {
+  groupDef.items = undefined;
+  groupDef.children = values.map((valueKey) => ({
+    title: valueKey,
+    key: `${groupDef.key}_${valueKey}`,
+    index,
+    items,
+  }));
+};
+
 export const transformToGridGroup = ({
   groupedData,
   groups,
@@ -124,10 +191,10 @@ export const transformToGridGroup = ({
   gridGroups: GridGroup[];
   groupsOrderMap: Record<string, number>;
 } => {
-  const gridGroups: GridGroup[] = [];
-
-  // 소계/합계/총계를 보여줘야 하는 그룹
-  const showSubtotalGroups = groups.filter(({ showTotal }) => showTotal === true);
+  // 소계를 보여줘야 하는 그룹의 깊이
+  const subtotalDepths = new Set(
+    groups.filter(({ showTotal, index }) => showTotal === true && index !== undefined).map(({ index }) => index),
+  );
 
   const groupsOrderMap: Record<string, number> = {};
 
@@ -140,7 +207,7 @@ export const transformToGridGroup = ({
     }
 
     return Object.keys(data)
-      .filter((key) => key !== 'groupId' && key !== 'null' && key !== '')
+      .filter((key) => !isNotAGroupValue(key))
       .map((key) => {
         const currentName = parentName ? `${parentName}_${key}` : key;
 
@@ -148,95 +215,79 @@ export const transformToGridGroup = ({
           title: key,
           key: currentName,
           index,
-          items: Array.isArray(data[key]) ? (data[key] as unknown as ILineItem[]) : undefined,
+          items: isLeafOf(data, key) ? itemsOf(data, key) : undefined,
         };
 
         const children = traverse(data[key] as GroupedData | ILineItem[], currentName, index + 1);
 
         if (children.length) {
-          children.sort((a, b) => {
-            const orderMapKeys = Object.keys(groupsOrderMap);
-            const aOrderList = orderMapKeys
-              .filter((key) => key.includes(a.title))
-              .map((k) => groupsOrderMap[k])
-              .sort((x, y) => y - x);
-            const bOrderList = orderMapKeys
-              .filter((key) => key.includes(b.title))
-              .map((k) => groupsOrderMap[k])
-              .sort((x, y) => y - x);
+          children.sort(byGroupOrder(groupsOrderMap));
 
-            return aOrderList[0] - bOrderList[0];
-          });
+          if (subtotalDepths.has(index)) {
+            const subtotalGroup = buildSubtotalGroup({ currentName, children, index });
 
-          const findSubtotalGroup = showSubtotalGroups.find(({ index: _idx }) => _idx !== undefined && _idx === index);
-          if (findSubtotalGroup) {
-            const subtotalGroupItems = children.flatMap((child) => child.items ?? []);
-
-            const subtotalGroup: GridGroup = {
-              index: index + 1,
-              key: subtotalKey(currentName),
-              title: TOTAL_LABEL.subtotal,
-              items: !subtotalGroupItems.length
-                ? children.flatMap((child) =>
-                    (child.children ?? []).flatMap(
-                      (c) => (c.title === TOTAL_LABEL.subtotal ? [] : (c.items ?? [])) as ILineItem[],
-                    ),
-                  )
-                : subtotalGroupItems,
-            };
-
-            if (axis === 'col') {
-              children.push(subtotalGroup);
-            } else {
-              const colSpan = getGroupedDataMaxDepth(data[key] as GroupedData | ILineItem[]);
-              subtotalGroup.colSpan = !subtotalGroupItems.length ? colSpan : undefined;
-              children.push(subtotalGroup);
+            // 행 축에서는 소계 행이 하위 그룹 열들을 가로질러 뻗는다.
+            // NOTE: custom-grid-v2 는 colSpan 을 제목으로 다시 계산하므로 이 값을
+            // 읽지 않는다. DEFERRED-ISSUES.md 에 남겨두었다.
+            if (axis === 'row') {
+              subtotalGroup.colSpan = children.some((child) => child.items?.length)
+                ? undefined
+                : getGroupedDataMaxDepth(data[key] as GroupedData | ILineItem[]);
             }
+            children.push(subtotalGroup);
           }
 
-          groupDef.children = children as GridGroup[];
+          groupDef.children = children;
         } else if (axis === 'col' && values?.length) {
-          groupDef.items = undefined;
-          groupDef.children = [];
-
-          for (const valueKey of values) {
-            const dataKey = `${currentName}_${valueKey}`;
-            const items = (Array.isArray(data[key]) ? data[key] : []) as unknown as ILineItem[];
-
-            groupDef.children.push({
-              title: valueKey,
-              key: dataKey,
-              index,
-              items,
-            });
-          }
+          expandValueColumns(groupDef, itemsOf(data, key), values, index);
         }
+
         return groupDef;
       });
   };
 
-  gridGroups.push(...traverse(groupedData, null));
+  const gridGroups = traverse(groupedData, null);
 
   if (showTotal) {
-    const groupedSubtotal: GroupedData = groupByHierarchical(
-      lineItems,
-      groups.filter(({ index }) => index !== 0).map(({ id }) => id),
-    );
-
-    const groupedSubtotalKeys = Object.keys(groupedSubtotal);
-    const total: GridGroup = { key: grandTotalKey(axis), title: TOTAL_LABEL.grandTotal, items: lineItems };
-
-    if (groupedSubtotalKeys.length > 1) {
-      const children = traverse(groupedSubtotal, SEMI_TOTAL_KEY_PREFIX);
-
-      gridGroups.push({ key: semiTotalKey(axis), title: TOTAL_LABEL.semiTotal, children });
-      gridGroups.push(total);
-    } else {
-      gridGroups.push(total);
-    }
+    gridGroups.push(...buildTotalGroups({ groups, lineItems, axis, traverse }));
   }
 
   return { gridGroups, groupsOrderMap };
+};
+
+interface TotalGroupsInput {
+  groups: ILineItemGroup[];
+  lineItems: ILineItem[];
+  axis: 'col' | 'row';
+  traverse: (data: GroupedData, parentName: string) => GridGroup[];
+}
+
+/**
+ * 축 맨 끝에 붙는 합계/총계.
+ *
+ * 최상위 그룹을 걷어낸 나머지 축으로 다시 묶어 합계를 만들되, 그렇게 묶어도
+ * 묶음이 하나뿐이면 총계와 다를 바 없으므로 총계만 붙인다.
+ */
+const buildTotalGroups = ({ groups, lineItems, axis, traverse }: TotalGroupsInput): GridGroup[] => {
+  const grandTotal: GridGroup = { key: grandTotalKey(axis), title: TOTAL_LABEL.grandTotal, items: lineItems };
+
+  const groupedSemiTotal = groupByHierarchical(
+    lineItems,
+    groups.filter(({ index }) => index !== 0).map(({ id }) => id),
+  );
+
+  if (Object.keys(groupedSemiTotal).length <= 1) {
+    return [grandTotal];
+  }
+
+  return [
+    {
+      key: semiTotalKey(axis),
+      title: TOTAL_LABEL.semiTotal,
+      children: traverse(groupedSemiTotal, SEMI_TOTAL_KEY_PREFIX),
+    },
+    grandTotal,
+  ];
 };
 
 interface IGetGroupedData {
@@ -246,71 +297,93 @@ interface IGetGroupedData {
   valueIsColumn?: boolean;
 }
 
+const sumValue = (items: ILineItem[], valueKey: string) =>
+  items.reduce((sum, item) => {
+    const value = Number(item[valueKey]);
+    return sum + (Number.isNaN(value) ? 0 : value);
+  }, 0);
+
+/**
+ * 행과 열은 같은 lineItems 배열을 각각 다른 기준으로 묶은 것이므로, 교차 셀에
+ * 들어갈 항목은 두 쪽에 함께 등장하는 '같은 객체'다.
+ */
+const sumCrossing = (colItems: ILineItem[], rowItems: Set<ILineItem>, valueKey: string) =>
+  sumValue(
+    colItems.filter((colItem) => rowItems.has(colItem)),
+    valueKey,
+  );
+
+/** 열 하나에 값 그룹이 여러 개인 경우 (colGroup 1, valueGroup N). */
+const fillValueColumns = (row: GridData, columns: Record<string, ILineItem[]>, rowItems: Set<ILineItem>) => {
+  for (const colKey of Object.keys(columns)) {
+    const valueKey = colKey.split('_').pop() ?? '';
+    row[colKey] = sumCrossing(columns[colKey], rowItems, valueKey);
+  }
+};
+
+/** 행 × 열 교차 집계. 총계 열은 실제 데이터 열만 합쳐서 따로 채운다. */
+const fillCrossColumns = (
+  row: GridData,
+  columns: Record<string, ILineItem[]>,
+  rowItems: Set<ILineItem>,
+  values: string[],
+) => {
+  // 소계/합계 열은 이미 다른 열을 합친 값이라, 총계에 다시 더하면 중복 집계된다.
+  let grandTotal = 0;
+
+  for (const colKey of Object.keys(columns)) {
+    for (const valueKey of values) {
+      const value = sumCrossing(columns[colKey], rowItems, valueKey);
+      row[colKey] = value;
+
+      if (!isAggregateKey(colKey)) {
+        grandTotal += value;
+      }
+    }
+  }
+
+  const grandTotalColumnKey = grandTotalKey('col');
+  if (grandTotalColumnKey in row) {
+    row[grandTotalColumnKey] = grandTotal;
+  }
+};
+
+/** 열 그룹이 없으면 값 그룹마다 그 행의 합계만 낸다. */
+const fillRowValues = (row: GridData, items: ILineItem[] | undefined, values: string[]) => {
+  for (const valueKey of values) {
+    row[valueKey] = items ? sumValue(items, valueKey) : undefined;
+  }
+};
+
 export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }: IGetGroupedData) => {
   const data: GridData[] = [];
-  const columnKeys = Object.keys(columns);
-  const grandTotalColumnKey = grandTotalKey('col');
+  const hasColumns = Object.keys(columns).length > 0;
 
-  const recur = ({ items, key, children }: GridGroup) => {
-    if (!items && children) {
-      for (const child of children) {
-        recur(child);
-      }
+  const buildRow = ({ items, key }: GridGroup): GridData => {
+    const row: GridData = { division: key };
+    const rowItems = new Set(items ?? []);
+
+    if (!hasColumns) {
+      fillRowValues(row, items, values);
+    } else if (valueIsColumn) {
+      fillValueColumns(row, columns, rowItems);
     } else {
-      const row: GridData = { division: key };
-
-      // 행과 열은 같은 lineItems 배열을 각각 다른 기준으로 묶은 것이므로,
-      // 교차 셀에 들어갈 항목은 두 쪽에 함께 등장하는 '같은 객체'다.
-      const rowItems = new Set(items ?? []);
-      const sumCrossing = (colItems: ILineItem[], valueKey: string) =>
-        colItems.reduce((sum, colItem) => {
-          if (!rowItems.has(colItem)) return sum;
-          const value = Number(colItem[valueKey]);
-          return sum + (Number.isNaN(value) ? 0 : value);
-        }, 0);
-
-      if (columnKeys.length) {
-        //열이 하나고 값이 여러개인 경우 colGroup 1, valueGroup N
-        if (valueIsColumn) {
-          for (const colKey of columnKeys) {
-            const valueKey = colKey.split('_').pop() ?? '';
-            row[colKey] = sumCrossing(columns[colKey], valueKey);
-          }
-        } else {
-          // 총계 열은 다른 열을 합친 값이므로, 소계/합계처럼 이미 합쳐진 열은
-          // 빼고 실제 데이터 열만 더한다. 그렇지 않으면 소계가 중복 집계된다.
-          let grandTotal = 0;
-          for (const colKey of columnKeys) {
-            for (const valueKey of values) {
-              const value = sumCrossing(columns[colKey], valueKey);
-              row[colKey] = value;
-
-              if (!isAggregateKey(colKey)) {
-                grandTotal += value;
-              }
-            }
-          }
-
-          if (grandTotalColumnKey in row) {
-            row[grandTotalColumnKey] = grandTotal;
-          }
-        }
-      } else {
-        for (const valueKey of values) {
-          row[valueKey] = items?.reduce((sum, cur) => {
-            const value = Number(cur[valueKey]);
-            return sum + (Number.isNaN(value) ? 0 : value);
-          }, 0);
-        }
-      }
-      data.push(row);
+      fillCrossColumns(row, columns, rowItems, values);
     }
+
+    return row;
   };
 
-  // 행을 기준으로 열 데이터 맵핑
-  for (const group of rows) {
-    recur(group);
-  }
+  // 잎 행만 데이터가 된다. 중간 그룹 행은 자식을 타고 내려간다.
+  const collectLeafRows = (group: GridGroup) => {
+    if (!group.items && group.children) {
+      group.children.forEach(collectLeafRows);
+      return;
+    }
+    data.push(buildRow(group));
+  };
+
+  rows.forEach(collectLeafRows);
   return data;
 };
 
