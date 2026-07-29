@@ -213,7 +213,7 @@ export const transformToGridGroup = ({
     );
 
     const groupedSubtotalKeys = Object.keys(groupedSubtotal);
-    const total = { key: `${axis}_total`, title: '총계', itesm: lineItems };
+    const total: GridGroup = { key: `${axis}_total`, title: '총계', items: lineItems };
 
     if (groupedSubtotalKeys.length > 1) {
       const children = traverse(groupedSubtotal, 'subtotal');

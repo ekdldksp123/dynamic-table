@@ -74,6 +74,18 @@ describe('transformToGridGroup — 행 축', () => {
 
     expect(titles(gridGroups)).toEqual(['자산', '부채', '총계']);
   });
+
+  test('총계 행은 전체 line item 을 들고 있어야 집계가 된다', () => {
+    const { gridGroups } = transformToGridGroup({
+      groupedData: groupByHierarchical(lineItems, [PURPOSE, SIDE]),
+      groups: purposeThenSide,
+      showTotal: true,
+      lineItems,
+    });
+
+    const total = gridGroups.find(({ title }) => title === '총계');
+    expect(total?.items).toEqual(lineItems);
+  });
 });
 
 describe('transformToGridGroup — 열 축', () => {
