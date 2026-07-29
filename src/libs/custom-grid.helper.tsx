@@ -8,7 +8,14 @@ import {
   LineItemKey,
 } from '@/types/create-table.v2';
 
-import { SEMI_TOTAL_KEY_PREFIX, TOTAL_LABEL, grandTotalKey, semiTotalKey, subtotalKey } from './grid-tokens';
+import {
+  SEMI_TOTAL_KEY_PREFIX,
+  TOTAL_LABEL,
+  grandTotalKey,
+  isAggregateKey,
+  semiTotalKey,
+  subtotalKey,
+} from './grid-tokens';
 
 export const getMaxDepth = (columns: GridGroup[]): number => {
   return columns.reduce((depth, column) => {
@@ -242,6 +249,7 @@ interface IGetGroupedData {
 export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }: IGetGroupedData) => {
   const data: GridData[] = [];
   const columnKeys = Object.keys(columns);
+  const grandTotalColumnKey = grandTotalKey('col');
 
   const recur = ({ items, key, children }: GridGroup) => {
     if (!items && children) {
@@ -269,18 +277,22 @@ export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }:
             row[colKey] = sumCrossing(columns[colKey], valueKey);
           }
         } else {
-          let total = 0;
+          // 총계 열은 다른 열을 합친 값이므로, 소계/합계처럼 이미 합쳐진 열은
+          // 빼고 실제 데이터 열만 더한다. 그렇지 않으면 소계가 중복 집계된다.
+          let grandTotal = 0;
           for (const colKey of columnKeys) {
             for (const valueKey of values) {
               const value = sumCrossing(columns[colKey], valueKey);
+              row[colKey] = value;
 
-              if (colKey === 'col_total') {
-                row[colKey] = total;
-              } else {
-                row[colKey] = value;
-                total += value;
+              if (!isAggregateKey(colKey)) {
+                grandTotal += value;
               }
             }
+          }
+
+          if (grandTotalColumnKey in row) {
+            row[grandTotalColumnKey] = grandTotal;
           }
         }
       } else {

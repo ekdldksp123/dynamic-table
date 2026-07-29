@@ -4,6 +4,7 @@ import {
   groupByHierarchical,
   transformToGridGroup,
 } from '@/libs/custom-grid.helper';
+import { grandTotalKey, subtotalKey } from '@/libs/grid-tokens';
 import { GridGroup, ILineItem, ILineItemGroup } from '@/types/create-table.v2';
 
 const PURPOSE = 'purpose';
@@ -98,6 +99,39 @@ describe('getGroupedData — 행 × 열 교차', () => {
       { division: '위험회피목적_자산', value: 3 },
       { division: '위험회피목적_부채', value: 43 },
     ]);
+  });
+
+  test('총계 열은 소계 열을 빼고 실제 데이터 열만 더한다', () => {
+    const rows: GridGroup[] = [{ key: '매매목적', title: '매매목적', items: [lineItems[0], lineItems[1]] }];
+    // 열: 자산(1) / 부채(2) / 소계(=3, 두 열의 합) / 총계
+    const columns = {
+      자산_value: [lineItems[0], lineItems[2]],
+      부채_value: [lineItems[1], lineItems[3]],
+      [subtotalKey('자산부채')]: lineItems,
+      [grandTotalKey('col')]: lineItems,
+    };
+
+    expect(getGroupedData({ rows, columns, values: [VALUE] })).toEqual([
+      {
+        division: '매매목적',
+        자산_value: 1,
+        부채_value: 2,
+        [subtotalKey('자산부채')]: 3,
+        // 소계(3)를 다시 더하지 않으므로 6이 아니라 3이다.
+        [grandTotalKey('col')]: 3,
+      },
+    ]);
+  });
+
+  test('총계 열은 열 순서와 무관하게 계산된다', () => {
+    const rows: GridGroup[] = [{ key: '매매목적', title: '매매목적', items: [lineItems[0], lineItems[1]] }];
+    const columns = {
+      [grandTotalKey('col')]: lineItems,
+      자산_value: [lineItems[0], lineItems[2]],
+      부채_value: [lineItems[1], lineItems[3]],
+    };
+
+    expect(getGroupedData({ rows, columns, values: [VALUE] })[0][grandTotalKey('col')]).toBe(3);
   });
 
   test('행에 없는 항목만 든 열은 0이다', () => {
