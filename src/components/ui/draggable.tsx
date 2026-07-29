@@ -1,5 +1,5 @@
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { Dispatch, FC, ReactNode, SetStateAction, useCallback } from 'react';
+import { FC, ReactNode } from 'react';
 
 import { CheckboxGroup } from '@/components/ui/checkbox';
 import {
@@ -28,8 +28,10 @@ const SELECT_PLACEHOLDER: Record<GroupType, string> = {
 interface DraggableCardListProps {
   title: string;
   children: ReactNode;
+  /** Select 에 띄울 후보 그룹 전체. */
   groups: ILineItemGroup[];
-  setGroups: Dispatch<SetStateAction<ILineItemGroup[]>>;
+  /** 고른 그룹을 이 축으로 옮기는 일은 쓰는 쪽이 한다. */
+  onSelectGroup: (id: string) => void;
   showTotal?: CheckedState;
   onChangeShowTotal?: (showTotal: CheckedState) => void;
 }
@@ -44,18 +46,11 @@ export const DraggableCardList: FC<DraggableCardListProps> = ({
   title,
   children,
   groups,
-  setGroups,
+  onSelectGroup,
   showTotal,
   onChangeShowTotal,
 }) => {
   const groupType = GROUP_TYPE_BY_TITLE[title];
-
-  const onSelectGroup = useCallback(
-    (id: string) => {
-      setGroups((prev) => prev.map((group) => (group.id === id ? { ...group, type: groupType } : group)));
-    },
-    [groupType, setGroups],
-  );
 
   return (
     <div className='p-3 border rounded'>

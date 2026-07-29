@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ReportProps } from '@/routes/$reportId';
@@ -22,7 +22,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableCardList } from '../ui/draggable';
 import { Grid } from '../ui/custom-grid-v2';
 import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
-import { GroupAxes, useGroupAxes } from '@/libs/hooks/useGroupAxes';
+import { initialGroupAxes, useGroupAxes } from '@/libs/hooks/useGroupAxes';
 import { Select } from '../ui/select';
 
 /** 체크박스는 'indeterminate' 도 낼 수 있지만, 집계는 켜짐/꺼짐만 안다. */
@@ -34,11 +34,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const [lineItems, setLineItems] = useState<ILineItem[]>([...(report.items ?? [])]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
-  const { axes, setAxis, moveGroup, removeGroup, setGroupShowTotal, maxLevelOf } = useGroupAxes({
-    row: [...(report.rowGroup ?? [])],
-    column: [...(report.colGroup ?? [])],
-    value: [...(report.valueGroup ?? [])],
-  });
+  const { axes, assignGroupToAxis, moveGroup, removeGroup, setGroupShowTotal, maxLevelOf } = useGroupAxes(
+    initialGroupAxes(report),
+  );
 
   // 값 축에는 총계가 없다.
   const [axisTotals, setAxisTotals] = useState<Partial<Record<GroupType, CheckedState>>>({
@@ -89,6 +87,18 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [lineItemGroups, removeGroup],
   );
 
+  /** 목록의 Select 에서 그룹을 고르면 그 그룹을 이 축으로 옮긴다. */
+  const onSelectGroup = useCallback(
+    (type: GroupType, id: string) => {
+      const group = lineItemGroups.find(({ id: groupId }) => groupId === id);
+      if (!group) return;
+
+      assignGroupToAxis(type, group);
+      setLineItemsGroups((prev) => prev.map((g) => (g.id === id ? { ...g, type } : g)));
+    },
+    [assignGroupToAxis, lineItemGroups],
+  );
+
   const onChangeShowTotal = useCallback(
     (type: GroupType, index: number, showTotal: CheckedState) => {
       if (typeof showTotal === 'boolean') {
@@ -119,12 +129,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [moveGroup, onChangeShowTotal, removeFromGroups],
   );
 
+  // axes 가 "어느 그룹이 어느 축에 있는가"의 유일한 출처다. group.type 은
+  // 저장용 표시이며, initialGroupAxes 와 onSelectGroup/removeFromGroups 가
+  // 둘을 항상 같이 움직인다.
   const renderGroups = useCallback(
-    (type: GroupType) => {
-      const groups = axes[type].length ? axes[type] : lineItemGroups.filter((group) => group.type === type);
-      return groups.map(renderGroupCard(type));
-    },
-    [axes, lineItemGroups, renderGroupCard],
+    (type: GroupType) => axes[type].map(renderGroupCard(type)),
+    [axes, renderGroupCard],
   );
 
   const onAddGroup = useCallback(() => {
@@ -210,24 +220,6 @@ export const Report: FC<ReportProps> = ({ route }) => {
       setPreview({ columns, rows, data, amountUnit });
     }
   }, [amountUnit, axes, axisTotals, fieldHeaders, getTableData, groupHeaders, lineItems]);
-
-  useEffect(() => {
-    if (!report.rowGroup?.length && !report.colGroup?.length) {
-      const seeded: Partial<GroupAxes> = {};
-      for (const group of lineItemGroups) {
-        if (group.type === 'row' || group.type === 'column') {
-          seeded[group.type] = [...(seeded[group.type] ?? []), group];
-        }
-      }
-
-      for (const type of ['row', 'column'] as const) {
-        if (seeded[type]?.length) setAxis(type, seeded[type]);
-      }
-    } else {
-      setAxis('row', report.rowGroup ?? []);
-      setAxis('column', report.colGroup ?? []);
-    }
-  }, [lineItemGroups, report.colGroup, report.rowGroup, setAxis]);
 
   return (
     <div className='p-5 bg-gray-100'>
@@ -337,7 +329,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 <DraggableCardList
                   title='Row'
                   groups={lineItemGroups}
-                  setGroups={setLineItemsGroups}
+                  onSelectGroup={(id) => onSelectGroup('row', id)}
                   showTotal={axisTotals.row}
                   onChangeShowTotal={(showTotal) => setAxisTotal('row', showTotal)}
                 >
@@ -346,13 +338,17 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 <DraggableCardList
                   title='Column'
                   groups={lineItemGroups}
-                  setGroups={setLineItemsGroups}
+                  onSelectGroup={(id) => onSelectGroup('column', id)}
                   showTotal={axisTotals.column}
                   onChangeShowTotal={(showTotal) => setAxisTotal('column', showTotal)}
                 >
                   {renderGroups('column')}
                 </DraggableCardList>
-                <DraggableCardList title='Value' groups={lineItemGroups} setGroups={setLineItemsGroups}>
+                <DraggableCardList
+                  title='Value'
+                  groups={lineItemGroups}
+                  onSelectGroup={(id) => onSelectGroup('value', id)}
+                >
                   {renderGroups('value')}
                 </DraggableCardList>
                 <div className='p-3 w-[100%] flex justify-between'>

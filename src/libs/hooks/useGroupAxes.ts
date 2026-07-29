@@ -1,7 +1,7 @@
 import update from 'immutability-helper';
 import { useCallback, useState } from 'react';
 
-import { GroupType, ILineItemGroup } from '@/types/create-table.v2';
+import { GroupType, ILineItemGroup, IReportConfig } from '@/types/create-table.v2';
 
 /** level 이 없는 그룹의 기준값. 실제 level 보다 항상 작아야 한다. */
 export const UNSET_LEVEL = -1;
@@ -12,6 +12,60 @@ export const GROUP_TYPES: readonly GroupType[] = ['row', 'column', 'value'] as c
 export type GroupAxes = Record<GroupType, ILineItemGroup[]>;
 
 export const emptyGroupAxes = (): GroupAxes => ({ row: [], column: [], value: [] });
+
+/** 각 그룹에 표시된 `type` 으로 축을 세운다. */
+const deriveAxesFromGroupTypes = (groups: ILineItemGroup[]): GroupAxes => {
+  const derived = emptyGroupAxes();
+  for (const group of groups) {
+    if (group.type) derived[group.type] = [...derived[group.type], group];
+  }
+  return derived;
+};
+
+/**
+ * 보고서 설정으로 축의 초기 상태를 만든다.
+ *
+ * 축별로 따로 판단한다 — 저장된 축이 있으면 그대로 쓰고, 비어 있으면 그룹에
+ * 표시된 `type` 에서 끌어온다. 저장된 보고서에 `valueGroup` 이 없는 경우가
+ * 흔하므로, 행/열이 저장되어 있다는 이유로 값 축을 비워두면 안 된다.
+ */
+export const initialGroupAxes = ({
+  groups,
+  rowGroup,
+  colGroup,
+  valueGroup,
+}: Pick<IReportConfig, 'groups' | 'rowGroup' | 'colGroup' | 'valueGroup'>): GroupAxes => {
+  const saved: GroupAxes = {
+    row: [...(rowGroup ?? [])],
+    column: [...(colGroup ?? [])],
+    value: [...(valueGroup ?? [])],
+  };
+
+  const derived = deriveAxesFromGroupTypes(groups ?? []);
+
+  return {
+    row: saved.row.length ? saved.row : derived.row,
+    column: saved.column.length ? saved.column : derived.column,
+    value: saved.value.length ? saved.value : derived.value,
+  };
+};
+
+/**
+ * 그룹을 한 축으로 옮긴다. 축은 서로 배타적이므로 다른 축에서는 빠진다.
+ *
+ * 이미 그 축에 있으면 순서가 흐트러지지 않도록 그대로 둔다.
+ */
+export const moveGroupToAxis = (axes: GroupAxes, type: GroupType, group: ILineItemGroup): GroupAxes => {
+  if (axes[type].some(({ id }) => id === group.id)) return axes;
+
+  const next = emptyGroupAxes();
+  for (const axis of GROUP_TYPES) {
+    next[axis] = axes[axis].filter(({ id }) => id !== group.id);
+  }
+  next[type] = [...next[type], { ...group, type }];
+
+  return next;
+};
 
 /**
  * 세 축을 같은 방식으로 다루기 위한 상태.
@@ -26,12 +80,10 @@ export const useGroupAxes = (initial: GroupAxes) => {
     setAxes((prev) => ({ ...prev, [type]: updater(prev[type]) }));
   }, []);
 
-  const setAxis = useCallback(
-    (type: GroupType, groups: ILineItemGroup[]) => {
-      updateAxis(type, () => groups);
-    },
-    [updateAxis],
-  );
+  /** 그룹 선택 UI 가 그룹을 이 축으로 옮길 때 쓴다. */
+  const assignGroupToAxis = useCallback((type: GroupType, group: ILineItemGroup) => {
+    setAxes((prev) => moveGroupToAxis(prev, type, group));
+  }, []);
 
   /** 드래그로 축 안에서 순서를 바꾼다. */
   const moveGroup = useCallback(
@@ -71,5 +123,5 @@ export const useGroupAxes = (initial: GroupAxes) => {
     [axes],
   );
 
-  return { axes, setAxis, moveGroup, removeGroup, setGroupShowTotal, maxLevelOf };
+  return { axes, assignGroupToAxis, moveGroup, removeGroup, setGroupShowTotal, maxLevelOf };
 };
