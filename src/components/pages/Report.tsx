@@ -23,7 +23,8 @@ import { DraggableCardList } from '../ui/draggable';
 import { Grid } from '../ui/custom-grid-v2';
 import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
 import { initialGroupAxes, useGroupAxes } from '@/libs/hooks/useGroupAxes';
-import { Select } from '../ui/select';
+import { AmountUnitSelect } from '../ui/amount-unit-select';
+import { DEFAULT_AMOUNT_UNIT } from '@/libs/amount-units';
 
 /** 체크박스는 'indeterminate' 도 낼 수 있지만, 집계는 켜짐/꺼짐만 안다. */
 const asBoolean = (checked: CheckedState | undefined) => checked === true;
@@ -48,7 +49,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
     setAxisTotals((prev) => ({ ...prev, [type]: showTotal }));
   }, []);
 
-  const [amountUnit, setAmountUnit] = useState<number>(1);
+  const [amountUnit, setAmountUnit] = useState<number>(DEFAULT_AMOUNT_UNIT);
 
   const { getTableData } = useCreateTableV2();
 
@@ -353,11 +354,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
                 </DraggableCardList>
                 <div className='p-3 w-[100%] flex justify-between'>
                   <p>Amount Unit</p>
-                  <Select onValueChange={(v) => setAmountUnit(Number(v))} defaultValue={'1'}>
-                    <option value='10000'>10,000</option>
-                    <option value='1000'>1,000</option>
-                    <option value='1'>1</option>
-                  </Select>
+                  <AmountUnitSelect value={amountUnit} onChange={setAmountUnit} />
                 </div>
               </div>
             </DndProvider>
