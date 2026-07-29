@@ -31,7 +31,7 @@ interface DraggableCardListProps {
   groups: ILineItemGroup[];
   setGroups: Dispatch<SetStateAction<ILineItemGroup[]>>;
   showTotal?: CheckedState;
-  setShowTotal?: Dispatch<SetStateAction<CheckedState>>;
+  onChangeShowTotal?: (showTotal: CheckedState) => void;
 }
 
 /**
@@ -46,7 +46,7 @@ export const DraggableCardList: FC<DraggableCardListProps> = ({
   groups,
   setGroups,
   showTotal,
-  setShowTotal,
+  onChangeShowTotal,
 }) => {
   const groupType = GROUP_TYPE_BY_TITLE[title];
 
@@ -79,12 +79,12 @@ export const DraggableCardList: FC<DraggableCardListProps> = ({
           </Select>
         </div>
       </div>
-      {setShowTotal ? (
+      {onChangeShowTotal ? (
         <CheckboxGroup
           id={`show-total-${groupType}`}
           label='Show Total'
           checked={showTotal}
-          onCheckedChange={setShowTotal}
+          onCheckedChange={onChangeShowTotal}
         />
       ) : null}
       <div className='flex flex-col gap-3'>{children}</div>
