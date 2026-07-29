@@ -17,56 +17,6 @@ export const getMaxDepth = (columns: GridColumn[]): number => {
   }, 1);
 };
 
-export const flattenColumns = (columns: GridColumn[]): GridColumn[] => {
-  return columns.reduce((flatCols, column) => {
-    if (column.children) {
-      return flatCols.concat(flattenColumns(column.children));
-    }
-    return flatCols.concat(column);
-  }, [] as GridColumn[]);
-};
-
-export const getGroupsFromLineItems = (items: ILineItem[]) => {
-  if (!items.length) return [];
-
-  const groupIdList = Object.keys(items[0]);
-  const lineItemGroups: ILineItemGroup[] = [];
-
-  const keyUniqueCounts: { key: string; count: number }[] = [];
-
-  for (const groupId of groupIdList) {
-    const uniqueValuesCount = new Set(items.map((v) => v[groupId])).size;
-    keyUniqueCounts.push({ key: groupId, count: uniqueValuesCount });
-
-    lineItemGroups.push({
-      id: groupId,
-      name: groupId,
-      level: 0,
-      showTotal: false,
-    });
-  }
-
-  keyUniqueCounts.sort((a, b) => a.count - b.count);
-
-  let level = 0;
-
-  for (let i = 0; i < keyUniqueCounts.length; i++) {
-    const { key, count } = keyUniqueCounts[i];
-    const findIndex = lineItemGroups.findIndex(({ id }) => id === key);
-    if (findIndex > -1) {
-      lineItemGroups[findIndex].level = level;
-
-      if (i < keyUniqueCounts.length - 1) {
-        const { count: nextCount } = keyUniqueCounts[i + 1];
-        if (count !== nextCount) {
-          level++;
-        }
-      }
-    }
-  }
-  return lineItemGroups;
-};
-
 export const getAmountWithGivenUnit = (value: number, unit: number) => {
   return value / unit;
 };
@@ -275,40 +225,6 @@ export const transformToGridGroup = ({
   }
 
   return { gridGroups, groupsOrderMap };
-};
-
-export const checkSubgroupKeys = (groupedData: GroupedData): boolean => {
-  const keySet: Set<string> = new Set();
-
-  const traverse = (data: GroupedData | ILineItem[]): boolean => {
-    if (Array.isArray(data)) {
-      return false;
-    }
-    let hasDuplicateKeys = false;
-
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        if (keySet.has(key)) {
-          hasDuplicateKeys = true;
-          break;
-        }
-        keySet.add(key);
-
-        const value = data[key];
-        //배열이 아닌 경우에만 재귀적으로 탐색
-        if (typeof value === 'object' && !Array.isArray(value)) {
-          hasDuplicateKeys = traverse(value);
-        }
-
-        if (hasDuplicateKeys) {
-          break;
-        }
-      }
-    }
-    return hasDuplicateKeys;
-  };
-
-  return traverse(groupedData);
 };
 
 interface IGetGroupedData {
