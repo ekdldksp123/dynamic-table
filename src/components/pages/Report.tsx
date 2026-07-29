@@ -25,18 +25,6 @@ import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
 import { GroupAxes, useGroupAxes } from '@/libs/hooks/useGroupAxes';
 import { Select } from '../ui/select';
 
-/**
- * 카드의 `type` 은 GroupCard 의 삭제 버튼이 어느 축에서 지울지를 정한다.
- *
- * 값 축 카드가 'column' 을 쓰는 것은 기존 동작을 그대로 옮긴 것이다 — 값 카드를
- * 지우면 열 축에서 지워지는 버그이며, 별도 fix 커밋에서 바로잡는다.
- */
-const GROUP_CARD_TYPE: Record<GroupType, GroupType> = {
-  row: 'row',
-  column: 'column',
-  value: 'column',
-};
-
 /** 체크박스는 'indeterminate' 도 낼 수 있지만, 집계는 켜짐/꺼짐만 안다. */
 const asBoolean = (checked: CheckedState | undefined) => checked === true;
 
@@ -125,7 +113,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
         onMoveGroup={(dragIndex, hoverIndex) => moveGroup(type, dragIndex, hoverIndex)}
         onRemoveGroup={removeFromGroups}
         onChangeShowTotal={type === 'value' ? undefined : (i, v) => onChangeShowTotal(type, i, v)}
-        type={GROUP_CARD_TYPE[type]}
+        type={type}
       />
     ),
     [moveGroup, onChangeShowTotal, removeFromGroups],
