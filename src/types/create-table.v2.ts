@@ -24,13 +24,14 @@ export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | n
 export interface IReportConfig {
   id: string;
   name: string;
-  items: ILineItem[];
-  groups: ILineItemGroup[];
-  rowGroup: ILineItemGroup[];
-  colGroup: ILineItemGroup[];
-  valueGroup: ILineItemGroup[];
-  showRowsTotal: boolean;
-  showColsTotal: boolean;
+  items?: ILineItem[];
+  /** 저장된 보고서에 축 배치가 아직 없을 수 있으므로 모두 optional 이다. */
+  groups?: ILineItemGroup[];
+  rowGroup?: ILineItemGroup[];
+  colGroup?: ILineItemGroup[];
+  valueGroup?: ILineItemGroup[];
+  showRowsTotal?: boolean;
+  showColsTotal?: boolean;
   created_at?: string;
   writer?: string; // 담당자
 }

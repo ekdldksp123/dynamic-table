@@ -29,12 +29,12 @@ import { Select } from '../ui/select';
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
 
-  const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
+  const [lineItems, setLineItems] = useState<ILineItem[]>([...(report.items ?? [])]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
-  const [colGroup, setColGroup] = useState<ILineItemGroup[]>([...report.colGroup]);
-  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([...report.rowGroup]);
-  const [valueGroup, setValueGroup] = useState<ILineItemGroup[]>([...report.valueGroup]);
+  const [colGroup, setColGroup] = useState<ILineItemGroup[]>([...(report.colGroup ?? [])]);
+  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([...(report.rowGroup ?? [])]);
+  const [valueGroup, setValueGroup] = useState<ILineItemGroup[]>([...(report.valueGroup ?? [])]);
 
   const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
   const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
