@@ -74,31 +74,32 @@ export const groupByHierarchical = (data: ILineItem[], keys: LineItemKey[]): Gro
   return nestedGroupBy(initialGroup as GroupedData, keys.slice(1));
 };
 
-export const getGroupValuesAndCodes = (items: ILineItem[], groupId: string) => {
-  const groupValues: string[] = [];
-  const lineItemsMap: Record<string, ILineItem[]> = {};
+/**
+ * 헤더 트리의 잎(= 실제 데이터가 들어가는 열)마다 그 열에 속한 line item 을
+ * 모아준다. `getGroupedData` 가 행 × 열 교차값을 계산할 때 쓴다.
+ *
+ * 잎에서 뽑아내므로 헤더에 그려지는 열과 데이터 맵의 키가 어긋날 수 없다.
+ */
+export const getLeafColumnItemsMap = (columns: GridGroup[]): Record<string, ILineItem[]> => {
+  const map: Record<string, ILineItem[]> = {};
 
-  for (const item of items) {
-    const itemValue = item[groupId] as unknown as KeyTypeFromItemValue;
-
-    if (!groupValues.includes(itemValue)) {
-      groupValues.push(itemValue);
-      lineItemsMap[itemValue] = [item];
-    } else {
-      lineItemsMap[itemValue] = [...lineItemsMap[itemValue], item];
+  const collect = (column: GridGroup) => {
+    if (column.children?.length) {
+      column.children.forEach(collect);
+      return;
     }
-  }
+    map[column.key] = column.items ?? [];
+  };
 
-  return { groupValues, lineItemsMap };
+  columns.forEach(collect);
+  return map;
 };
 
-interface ITransformToGridGroup {
+export interface ITransformToGridGroup {
   groupedData: GroupedData;
   groups: ILineItemGroup[];
   showTotal: boolean;
   lineItems: ILineItem[];
-  // minGroupValues: string[];
-  // lineItemsMap: Record<string, ILineItem[]>;
   axis?: 'col' | 'row';
   values?: string[];
 }
