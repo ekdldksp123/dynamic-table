@@ -247,30 +247,28 @@ export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }:
     } else {
       const row: GridData = { division: key };
 
+      // 행과 열은 같은 lineItems 배열을 각각 다른 기준으로 묶은 것이므로,
+      // 교차 셀에 들어갈 항목은 두 쪽에 함께 등장하는 '같은 객체'다.
+      const rowItems = new Set(items ?? []);
+      const sumCrossing = (colItems: ILineItem[], valueKey: string) =>
+        colItems.reduce((sum, colItem) => {
+          if (!rowItems.has(colItem)) return sum;
+          const value = Number(colItem[valueKey]);
+          return sum + (Number.isNaN(value) ? 0 : value);
+        }, 0);
+
       if (columnKeys.length) {
         //열이 하나고 값이 여러개인 경우 colGroup 1, valueGroup N
         if (valueIsColumn) {
           for (const colKey of columnKeys) {
-            const colItems = columns[colKey];
-            const valueItems = colItems.filter(({ id }) => (items ?? []).find((item) => id === item.id));
             const valueKey = colKey.split('_').pop() ?? '';
-
-            const value = valueItems.reduce((sum, cur) => {
-              const value = Number(cur[valueKey]);
-              return sum + (Number.isNaN(value) ? 0 : value);
-            }, 0);
-            row[colKey] = value;
+            row[colKey] = sumCrossing(columns[colKey], valueKey);
           }
         } else {
           let total = 0;
           for (const colKey of columnKeys) {
-            const colItems = columns[colKey];
             for (const valueKey of values) {
-              const valueItems = colItems.filter(({ id }) => (items ?? []).find((item) => id === item.id));
-              const value = valueItems.reduce((sum, cur) => {
-                const value = Number(cur[valueKey]);
-                return sum + (Number.isNaN(value) ? 0 : value);
-              }, 0);
+              const value = sumCrossing(columns[colKey], valueKey);
 
               if (colKey === 'col_total') {
                 row[colKey] = total;
