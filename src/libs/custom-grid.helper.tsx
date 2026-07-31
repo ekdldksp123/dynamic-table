@@ -294,7 +294,6 @@ interface IGetGroupedData {
   rows: GridGroup[];
   columns: Record<string, ILineItem[]>;
   values: string[];
-  valueIsColumn?: boolean;
 }
 
 const sumValue = (items: ILineItem[], valueKey: string) =>
@@ -312,14 +311,6 @@ const sumCrossing = (colItems: ILineItem[], rowItems: Set<ILineItem>, valueKey: 
     colItems.filter((colItem) => rowItems.has(colItem)),
     valueKey,
   );
-
-/** 열 하나에 값 그룹이 여러 개인 경우 (colGroup 1, valueGroup N). */
-const fillValueColumns = (row: GridData, columns: Record<string, ILineItem[]>, rowItems: Set<ILineItem>) => {
-  for (const colKey of Object.keys(columns)) {
-    const valueKey = colKey.split('_').pop() ?? '';
-    row[colKey] = sumCrossing(columns[colKey], rowItems, valueKey);
-  }
-};
 
 /**
  * 데이터 열의 key 는 `${그룹경로}_${값그룹}` 이므로, 그 열이 어떤 값 그룹을
@@ -367,7 +358,7 @@ const fillRowValues = (row: GridData, items: ILineItem[] | undefined, values: st
   }
 };
 
-export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }: IGetGroupedData) => {
+export const getGroupedData = ({ rows, columns, values }: IGetGroupedData) => {
   const data: GridData[] = [];
   const hasColumns = Object.keys(columns).length > 0;
 
@@ -375,12 +366,10 @@ export const getGroupedData = ({ rows, columns, values, valueIsColumn = false }:
     const row: GridData = { division: key };
     const rowItems = new Set(items ?? []);
 
-    if (!hasColumns) {
-      fillRowValues(row, items, values);
-    } else if (valueIsColumn) {
-      fillValueColumns(row, columns, rowItems);
-    } else {
+    if (hasColumns) {
       fillCrossColumns(row, columns, rowItems, values);
+    } else {
+      fillRowValues(row, items, values);
     }
 
     return row;
