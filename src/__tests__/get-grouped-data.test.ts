@@ -134,6 +134,58 @@ describe('getGroupedData — 행 × 열 교차', () => {
     expect(getGroupedData({ rows, columns, values: [VALUE] })[0][grandTotalKey('col')]).toBe(3);
   });
 
+  test('값 그룹이 여러 개면 각 열은 자기 값 그룹만 집계한다', () => {
+    //          자산                     부채
+    //          amount  qty              amount  qty
+    // 매매목적      1     10                  2    20
+    // 위험회피목적   3     30                 43   430
+    const multi: ILineItem[] = [
+      { code: 'a', base: '당기말', [PURPOSE]: '매매목적', [SIDE]: '자산', amount: 1, qty: 10 },
+      { code: 'b', base: '당기말', [PURPOSE]: '매매목적', [SIDE]: '부채', amount: 2, qty: 20 },
+      { code: 'c', base: '당기말', [PURPOSE]: '위험회피목적', [SIDE]: '자산', amount: 3, qty: 30 },
+      { code: 'd', base: '당기말', [PURPOSE]: '위험회피목적', [SIDE]: '부채', amount: 43, qty: 430 },
+    ];
+    const valueKeys = ['amount', 'qty'];
+
+    const { gridGroups: rows } = transformToGridGroup({
+      groupedData: groupByHierarchical(multi, [PURPOSE]),
+      groups: [group(PURPOSE, '거래목적', 0)],
+      showTotal: false,
+      lineItems: multi,
+    });
+
+    const { gridGroups: columns } = transformToGridGroup({
+      groupedData: groupByHierarchical(multi, [SIDE]),
+      groups: [group(SIDE, '자산부채', 0)],
+      showTotal: false,
+      lineItems: multi,
+      axis: 'col',
+      values: valueKeys,
+    });
+
+    const data = getGroupedData({ rows, columns: getLeafColumnItemsMap(columns), values: valueKeys });
+
+    // 이전에는 안쪽 루프가 row[colKey] 를 덮어써서 모든 열이 마지막 값 그룹(qty)을 보여줬다.
+    expect(data).toEqual([
+      { division: '매매목적', 자산_amount: 1, 자산_qty: 10, 부채_amount: 2, 부채_qty: 20 },
+      { division: '위험회피목적', 자산_amount: 3, 자산_qty: 30, 부채_amount: 43, 부채_qty: 430 },
+    ]);
+  });
+
+  test('값 그룹이 여러 개일 때 총계 열은 데이터 열을 한 번씩만 더한다', () => {
+    const rows: GridGroup[] = [{ key: '매매목적', title: '매매목적', items: [lineItems[0], lineItems[1]] }];
+    const columns = {
+      자산_value: [lineItems[0], lineItems[2]],
+      자산_qty: [lineItems[0], lineItems[2]],
+      [grandTotalKey('col')]: lineItems,
+    };
+
+    const data = getGroupedData({ rows, columns, values: [VALUE, 'qty'] });
+    // 자산_value=1, 자산_qty=0(qty 필드 없음) → 총계 1. 값 그룹 수만큼 곱해지지 않는다.
+    expect(data[0].자산_value).toBe(1);
+    expect(data[0][grandTotalKey('col')]).toBe(1);
+  });
+
   test('행에 없는 항목만 든 열은 0이다', () => {
     const rows: GridGroup[] = [{ key: '매매목적', title: '매매목적', items: [lineItems[0]] }];
     const columns = { onlyOther: [lineItems[3]] };

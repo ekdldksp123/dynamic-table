@@ -321,6 +321,13 @@ const fillValueColumns = (row: GridData, columns: Record<string, ILineItem[]>, r
   }
 };
 
+/**
+ * 데이터 열의 key 는 `${그룹경로}_${값그룹}` 이므로, 그 열이 어떤 값 그룹을
+ * 나타내는지는 접미사로 알 수 있다. 소계/총계 열에는 값 접미사가 없다.
+ */
+const valueKeyOfColumn = (colKey: string, values: string[]) =>
+  values.find((valueKey) => colKey.endsWith(`_${valueKey}`));
+
 /** 행 × 열 교차 집계. 총계 열은 실제 데이터 열만 합쳐서 따로 채운다. */
 const fillCrossColumns = (
   row: GridData,
@@ -332,13 +339,18 @@ const fillCrossColumns = (
   let grandTotal = 0;
 
   for (const colKey of Object.keys(columns)) {
-    for (const valueKey of values) {
-      const value = sumCrossing(columns[colKey], rowItems, valueKey);
-      row[colKey] = value;
+    const valueKey = valueKeyOfColumn(colKey, values);
 
-      if (!isAggregateKey(colKey)) {
-        grandTotal += value;
-      }
+    // 값 그룹이 특정되는 데이터 열은 그 값만 집계한다. 값 접미사가 없는
+    // 소계/총계 열은 모든 값 그룹을 합친다.
+    const value = valueKey
+      ? sumCrossing(columns[colKey], rowItems, valueKey)
+      : values.reduce((sum, key) => sum + sumCrossing(columns[colKey], rowItems, key), 0);
+
+    row[colKey] = value;
+
+    if (!isAggregateKey(colKey)) {
+      grandTotal += value;
     }
   }
 
