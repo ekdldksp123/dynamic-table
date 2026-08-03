@@ -26,6 +26,9 @@ const run = ({
   showColsTotal?: boolean;
   amountUnit?: number;
 } = {}) => {
+  // useCreateTableV2 는 이름만 훅이고 React 훅을 쓰지 않는 순수 팩토리라
+  // 컴포넌트 밖에서 호출해도 된다.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { getTableData } = useCreateTableV2();
   // 축 배열은 호출 때마다 index 가 다시 매겨지므로 복사해서 넘긴다.
   return getTableData({

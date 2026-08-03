@@ -27,7 +27,8 @@ const SELECT_PLACEHOLDER: Record<GroupType, string> = {
 
 interface DraggableCardListProps {
   title: string;
-  children: ReactNode;
+  /** 이 축에 놓인 그룹 카드들. 축이 비어 있으면 없다. */
+  children?: ReactNode;
   /** Select 에 띄울 후보 그룹 전체. */
   groups: ILineItemGroup[];
   /** 고른 그룹을 이 축으로 옮기는 일은 쓰는 쪽이 한다. */
