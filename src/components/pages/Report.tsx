@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ReportProps } from '@/routes/$reportId';
 import { v4 as uuidv4 } from 'uuid';
-import update from 'immutability-helper';
 import { VscDiffRemoved } from 'react-icons/vsc';
 
 import { GroupCard } from '../ui/card';
@@ -19,25 +17,39 @@ import {
   IReportConfig,
   ItemValueType,
 } from '@/types/create-table.v2';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableCardList } from '../ui/draggable';
 import { Grid } from '../ui/custom-grid-v2';
 import { useCreateTableV2 } from '@/libs/hooks/useCreateTableV2';
-import { Select } from '../ui/select';
+import { initialGroupAxes, useGroupAxes } from '@/libs/hooks/useGroupAxes';
+import { AmountUnitSelect } from '../ui/amount-unit-select';
+import { DEFAULT_AMOUNT_UNIT } from '@/libs/amount-units';
+
+/** 체크박스는 'indeterminate' 도 낼 수 있지만, 집계는 켜짐/꺼짐만 안다. */
+const asBoolean = (checked: CheckedState | undefined) => checked === true;
 
 export const Report: FC<ReportProps> = ({ route }) => {
   const report: IReportConfig = route.useLoaderData();
 
-  const [lineItems, setLineItems] = useState<ILineItem[]>([...report.items]);
+  const [lineItems, setLineItems] = useState<ILineItem[]>([...(report.items ?? [])]);
   const [lineItemGroups, setLineItemsGroups] = useState<ILineItemGroup[]>(report.groups ?? []);
 
-  const [colGroup, setColGroup] = useState<ILineItemGroup[]>([...report.colGroup]);
-  const [rowGroup, setRowGroup] = useState<ILineItemGroup[]>([...report.rowGroup]);
-  const [valueGroup, setValueGroup] = useState<ILineItemGroup[]>([...report.valueGroup]);
+  const { axes, assignGroupToAxis, moveGroup, removeGroup, setGroupShowTotal, maxLevelOf } = useGroupAxes(
+    initialGroupAxes(report),
+  );
 
-  const [showRowsTotal, setShowRowsTotal] = useState<CheckedState>(report.showRowsTotal ?? false);
-  const [showColsTotal, setShowColsTotal] = useState<CheckedState>(report.showColsTotal ?? false);
+  // 값 축에는 총계가 없다.
+  const [axisTotals, setAxisTotals] = useState<Partial<Record<GroupType, CheckedState>>>({
+    row: report.showRowsTotal ?? false,
+    column: report.showColsTotal ?? false,
+  });
 
-  const [amountUnit, setAmountUnit] = useState<number>(1);
+  const setAxisTotal = useCallback((type: GroupType, showTotal: CheckedState) => {
+    setAxisTotals((prev) => ({ ...prev, [type]: showTotal }));
+  }, []);
+
+  const [amountUnit, setAmountUnit] = useState<number>(DEFAULT_AMOUNT_UNIT);
 
   const { getTableData } = useCreateTableV2();
 
@@ -57,66 +69,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
     [fieldHeaders, lineItemGroups],
   );
 
-  const moveColGroup = useCallback(
-    (dragIndex: number, hoverIndex: number) => {
-      const dragGroup = colGroup[dragIndex];
-      setColGroup(
-        update(colGroup, {
-          $splice: [
-            [dragIndex, 1],
-            [hoverIndex, 0, dragGroup],
-          ],
-        }),
-      );
-    },
-    [colGroup, setColGroup],
-  );
-
-  const moveRowGroup = useCallback(
-    (dragIndex: number, hoverIndex: number) => {
-      const dragGroup = rowGroup[dragIndex];
-      setRowGroup(
-        update(rowGroup, {
-          $splice: [
-            [dragIndex, 1],
-            [hoverIndex, 0, dragGroup],
-          ],
-        }),
-      );
-    },
-    [rowGroup, setRowGroup],
-  );
-
-  const moveValueGroup = useCallback(
-    (dragIndex: number, hoverIndex: number) => {
-      const dragGroup = valueGroup[dragIndex];
-      setValueGroup(
-        update(valueGroup, {
-          $splice: [
-            [dragIndex, 1],
-            [hoverIndex, 0, dragGroup],
-          ],
-        }),
-      );
-    },
-    [valueGroup, setValueGroup],
-  );
-
   const removeFromGroups = useCallback(
     (id: string, axis: GroupType) => {
-      switch (axis) {
-        case 'row':
-          setRowGroup((prev) => prev.filter((group) => group.id !== id));
-          break;
-        case 'column':
-          setColGroup((prev) => prev.filter((group) => group.id !== id));
-          break;
-        case 'value':
-          setValueGroup((prev) => prev.filter((group) => group.id !== id));
-          break;
-        default:
-          break;
-      }
+      removeGroup(axis, id);
 
       if (lineItemGroups.find((group) => group.id === id)) {
         setLineItemsGroups((prev) =>
@@ -130,98 +85,57 @@ export const Report: FC<ReportProps> = ({ route }) => {
         );
       }
     },
-    [lineItemGroups],
+    [lineItemGroups, removeGroup],
   );
 
-  const onChangeRowShowTotal = useCallback(
-    (index: number, showTotal: CheckedState) => {
-      setRowGroup((prev) => {
-        if (typeof showTotal === 'boolean') {
-          prev[index].showTotal = showTotal;
-          return [...prev];
-        }
-        return prev;
-      });
+  /** 목록의 Select 에서 그룹을 고르면 그 그룹을 이 축으로 옮긴다. */
+  const onSelectGroup = useCallback(
+    (type: GroupType, id: string) => {
+      const group = lineItemGroups.find(({ id: groupId }) => groupId === id);
+      if (!group) return;
 
-      const groupLevel = rowGroup[index].level;
-      const maxGroupLevel = Math.max(...rowGroup.map((g) => g.level ?? -1));
-      if (groupLevel === maxGroupLevel) {
-        setShowRowsTotal(showTotal);
+      assignGroupToAxis(type, group);
+      setLineItemsGroups((prev) => prev.map((g) => (g.id === id ? { ...g, type } : g)));
+    },
+    [assignGroupToAxis, lineItemGroups],
+  );
+
+  const onChangeShowTotal = useCallback(
+    (type: GroupType, index: number, showTotal: CheckedState) => {
+      if (typeof showTotal === 'boolean') {
+        setGroupShowTotal(type, index, showTotal);
+      }
+
+      // 가장 깊은 그룹의 소계는 그 축 전체의 총계와 같다.
+      if (axes[type][index].level === maxLevelOf(type)) {
+        setAxisTotal(type, showTotal);
       }
     },
-    [rowGroup, setRowGroup],
+    [axes, maxLevelOf, setAxisTotal, setGroupShowTotal],
   );
 
-  const onChangeColShowTotal = useCallback(
-    (index: number, showTotal: CheckedState) => {
-      setColGroup((prev) => {
-        if (typeof showTotal === 'boolean') {
-          prev[index].showTotal = showTotal;
-          return [...prev];
-        }
-        return prev;
-      });
-
-      const groupLevel = colGroup[index].level;
-      const maxGroupLevel = Math.max(...colGroup.map((g) => g.level ?? -1e));
-      if (groupLevel === maxGroupLevel) {
-        setShowColsTotal(showTotal);
-      }
-    },
-    [colGroup, setColGroup],
+  const renderGroupCard = useCallback(
+    (type: GroupType) => (group: ILineItemGroup, index: number) => (
+      <GroupCard
+        key={`${type}-${group.id}`}
+        id={uuidv4()}
+        group={group}
+        index={index}
+        onMoveGroup={(dragIndex, hoverIndex) => moveGroup(type, dragIndex, hoverIndex)}
+        onRemoveGroup={removeFromGroups}
+        onChangeShowTotal={type === 'value' ? undefined : (i, v) => onChangeShowTotal(type, i, v)}
+        type={type}
+      />
+    ),
+    [moveGroup, onChangeShowTotal, removeFromGroups],
   );
 
-  const renderRow = useCallback(
-    (group: ILineItemGroup, index: number) => {
-      return (
-        <GroupCard
-          key={`row-${group.id}`}
-          id={uuidv4()}
-          group={group}
-          index={index}
-          onMoveGroup={moveRowGroup}
-          onRemoveGroup={removeFromGroups}
-          onChangeShowTotal={onChangeRowShowTotal}
-          type='row'
-        />
-      );
-    },
-    [moveRowGroup, onChangeRowShowTotal, removeFromGroups],
-  );
-
-  const renderColumn = useCallback(
-    (group: ILineItemGroup, index: number) => {
-      return (
-        <GroupCard
-          key={`col-${group.id}`}
-          id={uuidv4()}
-          group={group}
-          index={index}
-          onMoveGroup={moveColGroup}
-          onRemoveGroup={removeFromGroups}
-          onChangeShowTotal={onChangeColShowTotal}
-          type='column'
-        />
-      );
-    },
-    [moveColGroup, onChangeColShowTotal, removeFromGroups],
-  );
-
-  const renderValue = useCallback(
-    (group: ILineItemGroup, index: number) => {
-      return (
-        <GroupCard
-          key={`value-${group.id}`}
-          id={uuidv4()}
-          group={group}
-          index={index}
-          onMoveGroup={moveValueGroup}
-          onRemoveGroup={removeFromGroups}
-          type='column'
-        />
-      );
-    },
-    [moveValueGroup, removeFromGroups],
+  // axes 가 "어느 그룹이 어느 축에 있는가"의 유일한 출처다. group.type 은
+  // 저장용 표시이며, initialGroupAxes 와 onSelectGroup/removeFromGroups 가
+  // 둘을 항상 같이 움직인다.
+  const renderGroups = useCallback(
+    (type: GroupType) => axes[type].map(renderGroupCard(type)),
+    [axes, renderGroupCard],
   );
 
   const onAddGroup = useCallback(() => {
@@ -266,30 +180,9 @@ export const Report: FC<ReportProps> = ({ route }) => {
     // } catch (error) {
     //   alert(`failed to save report config :: ${(error as Error).message}`);
     // }
-  }, [colGroup, lineItemGroups, lineItems, report.id, rowGroup, showColsTotal, showRowsTotal]);
-
-  const renderRowGroups = useMemo(
-    () =>
-      rowGroup.length
-        ? rowGroup.map((row, i) => renderRow(row, i))
-        : lineItemGroups.filter((g) => g.type === 'row').map((row, i) => renderRow(row, i)),
-    [lineItemGroups, renderRow, rowGroup],
-  );
-  const renderColGroups = useMemo(
-    () =>
-      colGroup.length
-        ? colGroup.map((col, i) => renderColumn(col, i))
-        : lineItemGroups.filter((g) => g.type === 'column').map((col, i) => renderColumn(col, i)),
-    [lineItemGroups, renderColumn, colGroup],
-  );
-
-  const renderValueGroups = useMemo(
-    () =>
-      valueGroup.length
-        ? valueGroup.map((col, i) => renderValue(col, i))
-        : lineItemGroups.filter((g) => g.type === 'value').map((col, i) => renderValue(col, i)),
-    [lineItemGroups, renderValue, valueGroup],
-  );
+    // 본문이 아직 주석 상태이므로 의존성도 비워둔다. 되살릴 때 eslint 가
+    // 필요한 값을 다시 알려준다.
+  }, []);
 
   const [preview, setPreview] = useState<{
     columns: GridGroup[];
@@ -312,12 +205,12 @@ export const Report: FC<ReportProps> = ({ route }) => {
   const onClickPreview = useCallback(() => {
     const { columns, rows, data } = getTableData({
       lineItems,
-      colGroup,
-      rowGroup,
-      valueGroup,
+      colGroup: axes.column,
+      rowGroup: axes.row,
+      valueGroup: axes.value,
       amountUnit,
-      showColsTotal: typeof showColsTotal === 'string' ? false : showColsTotal,
-      showRowsTotal: typeof showRowsTotal === 'string' ? false : showRowsTotal,
+      showColsTotal: asBoolean(axisTotals.column),
+      showRowsTotal: asBoolean(axisTotals.row),
       fieldHeaders,
       groupHeaders,
     });
@@ -327,46 +220,7 @@ export const Report: FC<ReportProps> = ({ route }) => {
     } else {
       setPreview({ columns, rows, data, amountUnit });
     }
-  }, [
-    amountUnit,
-    colGroup,
-    fieldHeaders,
-    getTableData,
-    groupHeaders,
-    lineItems,
-    rowGroup,
-    showColsTotal,
-    showRowsTotal,
-    valueGroup,
-  ]);
-
-  useEffect(() => {
-    if (!report.rowGroup?.length && !report.colGroup?.length) {
-      const rows = [];
-      const cols = [];
-      for (const group of lineItemGroups) {
-        if (group.type === 'row') {
-          rows.push(group);
-        } else if (group.type === 'column') {
-          cols.push(group);
-        }
-      }
-
-      if (rows.length) setRowGroup(rows);
-      if (cols.length) setColGroup(cols);
-    } else {
-      setRowGroup(report.rowGroup ?? []);
-      setColGroup(report.colGroup ?? []);
-    }
-  }, [
-    lineItemGroups,
-    report.colGroup,
-    report.colGroup?.length,
-    report.rowGroup,
-    report.rowGroup?.length,
-    setColGroup,
-    setRowGroup,
-  ]);
+  }, [amountUnit, axes, axisTotals, fieldHeaders, getTableData, groupHeaders, lineItems]);
 
   return (
     <div className='p-5 bg-gray-100'>
@@ -471,37 +325,39 @@ export const Report: FC<ReportProps> = ({ route }) => {
 
           <section className='w-[20%]'>
             <p className='mt-5 text-lg font-bold mb-1'>Edit Table Layout</p>
-            <div className='grid gap-3'>
-              <DraggableCardList
-                title='Row'
-                groups={lineItemGroups}
-                setGroups={setLineItemsGroups}
-                showTotal={showRowsTotal}
-                setShowTotal={setShowRowsTotal}
-              >
-                {renderRowGroups}
-              </DraggableCardList>
-              <DraggableCardList
-                title='Column'
-                groups={lineItemGroups}
-                setGroups={setLineItemsGroups}
-                showTotal={showColsTotal}
-                setShowTotal={setShowColsTotal}
-              >
-                {renderColGroups}
-              </DraggableCardList>
-              <DraggableCardList title='Value' groups={lineItemGroups} setGroups={setLineItemsGroups}>
-                {renderValueGroups}
-              </DraggableCardList>
-              <div className='p-3 w-[100%] flex justify-between'>
-                <p>Amount Unit</p>
-                <Select onValueChange={(v) => setAmountUnit(Number(v))} defaultValue={'1'}>
-                  <option value='10000'>10,000</option>
-                  <option value='1000'>1,000</option>
-                  <option value='1'>1</option>
-                </Select>
+            <DndProvider backend={HTML5Backend}>
+              <div className='grid gap-3'>
+                <DraggableCardList
+                  title='Row'
+                  groups={lineItemGroups}
+                  onSelectGroup={(id) => onSelectGroup('row', id)}
+                  showTotal={axisTotals.row}
+                  onChangeShowTotal={(showTotal) => setAxisTotal('row', showTotal)}
+                >
+                  {renderGroups('row')}
+                </DraggableCardList>
+                <DraggableCardList
+                  title='Column'
+                  groups={lineItemGroups}
+                  onSelectGroup={(id) => onSelectGroup('column', id)}
+                  showTotal={axisTotals.column}
+                  onChangeShowTotal={(showTotal) => setAxisTotal('column', showTotal)}
+                >
+                  {renderGroups('column')}
+                </DraggableCardList>
+                <DraggableCardList
+                  title='Value'
+                  groups={lineItemGroups}
+                  onSelectGroup={(id) => onSelectGroup('value', id)}
+                >
+                  {renderGroups('value')}
+                </DraggableCardList>
+                <div className='p-3 w-[100%] flex justify-between'>
+                  <p>Amount Unit</p>
+                  <AmountUnitSelect value={amountUnit} onChange={setAmountUnit} />
+                </div>
               </div>
-            </div>
+            </DndProvider>
           </section>
         </section>
         <div className='w-[100%] flex items-end justify-between mb-2'>

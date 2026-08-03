@@ -1,4 +1,5 @@
 import { amountToLocaleString, getColSpan, getMaxDepth, getRowSpan } from '@/libs/custom-grid.helper';
+import { GRID_CLASS, TOTAL_LABEL, isSubtotalKey, isTotalKey, isTotalRow } from '@/libs/grid-tokens';
 import { GridData, GridGroup } from '@/types/create-table.v2';
 import classNames from 'classnames';
 import { FC, ReactNode, useCallback, useMemo } from 'react';
@@ -31,9 +32,9 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
               <td
                 key={uuidv4()}
                 className={classNames(
-                  'px-4 py-2 bg-[#EDF0FE] font-normal border-r border-b border-white',
+                  `px-4 py-2 ${GRID_CLASS.dataCell} font-normal border-r border-b border-white`,
                   { '!text-right': isNumber },
-                  { '!bg-[#C1C4CF]': dataDivision.includes('subtotal') || dataDivision.includes('total') },
+                  { [GRID_CLASS.totalCell]: isSubtotalKey(dataDivision) || isTotalKey(dataDivision) },
                 )}
               >
                 {isNumber ? amountToLocaleString(value) : value}
@@ -60,8 +61,8 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
           key={row.key}
           rowSpan={rowSpan}
           colSpan={1}
-          className={classNames('px-4 py-2 bg-[#DCE2F7] font-semibold border-r border-b border-white', {
-            '!bg-[#C1C4CF]': row.key.includes('subtotal'),
+          className={classNames(`px-4 py-2 ${GRID_CLASS.headerCell} font-semibold border-r border-b border-white`, {
+            [GRID_CLASS.totalCell]: isSubtotalKey(row.key),
           })}
         >
           {row.title}
@@ -76,7 +77,12 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
   const renderRow = useCallback(
     (row: GridGroup, depth: number): JSX.Element[] => {
       const rowSpan = getRowSpan(row);
-      const colSpan = row.title === '소계' ? rowMaxDepth - depth - 1 : row.title === '총계' ? rowMaxDepth - depth : 1;
+      const colSpan =
+        row.title === TOTAL_LABEL.subtotal
+          ? rowMaxDepth - depth - 1
+          : row.title === TOTAL_LABEL.grandTotal
+            ? rowMaxDepth - depth
+            : 1;
       const children = row.children ?? [];
       const hasChildren = children.length > 0;
 
@@ -88,9 +94,8 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
           <td
             colSpan={colSpan}
             rowSpan={rowSpan}
-            className={classNames('px-4 py-2 bg-[#DCE2F7] font-semibold border-r border-b border-white', {
-              '!bg-[#C1C4CF]':
-                row.title === '합계' || row.title === '총계' || row.title === '소계' || row.key.includes('subtotal'),
+            className={classNames(`px-4 py-2 ${GRID_CLASS.headerCell} font-semibold border-r border-b border-white`, {
+              [GRID_CLASS.totalCell]: isTotalRow(row),
             })}
           >
             {row.title}
@@ -119,7 +124,7 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
             return (
               <td
                 key={uuidv4()}
-                className={classNames('px-4 py-2 bg-[#EDF0FE] font-normal border-r border-b border-white', {
+                className={classNames(`px-4 py-2 ${GRID_CLASS.dataCell} font-normal border-r border-b border-white`, {
                   '!text-right': isNumber,
                 })}
               >
@@ -145,7 +150,7 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
         cols.map((col, idx) => (
           <th
             key={col.key}
-            colSpan={getColSpan(col, idx, depth, rowMaxDepth)}
+            colSpan={getColSpan(col, idx, rowMaxDepth)}
             rowSpan={
               depth === 0 && idx === 0
                 ? colMaxDepth
@@ -156,7 +161,7 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
                   : 1
             }
             className={classNames('px-4 py-2 border-r border-b border-white grow', {
-              'bg-[#B0BDEA]': depth !== 0,
+              [GRID_CLASS.nestedHeaderCell]: depth !== 0,
             })}
           >
             {col.title}
@@ -178,11 +183,11 @@ export const Grid: FC<GridProps> = ({ columns, rows, data, amountUnit }) => {
     <div className='max-w-[100%] overflow-x-auto'>
       {amountUnit !== '' ? (
         <div className='flex items-center justify-end'>
-          <small className='text-[#535151]'>{`(단위: ${amountUnit})`}</small>
+          <small className={GRID_CLASS.unitCaption}>{`(단위: ${amountUnit})`}</small>
         </div>
       ) : null}
       <table className='relative min-w-full bg-white whitespace-nowrap'>
-        <thead className='w-[100%] bg-[#DCE2F7] font-semibold border-b border-white sticky top-0'>
+        <thead className={`w-[100%] ${GRID_CLASS.headerCell} font-semibold border-b border-white sticky top-0`}>
           {renderHeaders()}
         </thead>
         <tbody>{renderRows()}</tbody>

@@ -1,13 +1,12 @@
-import { GridData, GridGroup, ILineItem, ILineItemGroup } from '@/types/create-table.v2';
+import { GridData, GridGroup, GroupedData, ILineItem, ILineItemGroup } from '@/types/create-table.v2';
 import {
   getDataCountedInGivenUnits,
   getFirstColumn,
-  getGroupValuesAndCodes,
   getGroupedData,
+  getLeafColumnItemsMap,
   groupByHierarchical,
   transformToGridGroup,
 } from '../custom-grid.helper';
-import { GroupedData } from '@/types';
 
 interface IGetGridData {
   lineItems: ILineItem[];
@@ -100,15 +99,11 @@ export const useCreateTableV2 = () => {
       rowGroup.map(({ id }) => id),
     );
 
-    const minGroup = rowGroup[rowGroup.length - 1];
-    const { groupValues, lineItemsMap } = getGroupValuesAndCodes(lineItems, minGroup.id);
-
     const { gridGroups: rows } = transformToGridGroup({
       groupedData: groupedRowData,
       groups: rowGroup,
       showTotal: showRowsTotal,
-      minGroupValues: groupValues,
-      lineItemsMap,
+      lineItems,
     });
 
     const values = valueGroup.map(({ id }) => id);
@@ -149,28 +144,20 @@ export const useCreateTableV2 = () => {
       colGroup.map(({ id }) => id),
     );
 
-    const minColGroup = colGroup[colGroup.length - 1];
-    const { groupValues: colMinGroupValues, lineItemsMap: colMinGroupLineItemsMap } = getGroupValuesAndCodes(
-      lineItems,
-      minColGroup.id,
-    );
-
-    const minRowGroup = rowGroup[rowGroup.length - 1];
-    const { groupValues: rowMinGroupValues, lineItemsMap: rowMinGroupLineItemsMap } = getGroupValuesAndCodes(
-      lineItems,
-      minRowGroup.id,
-    );
     const values = valueGroup.map(({ id }) => id);
 
-    const { gridGroups: columns, columnsKeyValueMap } = transformToGridGroup({
+    const { gridGroups: columns } = transformToGridGroup({
       groupedData: groupedColData,
       groups: colGroup,
       showTotal: showColsTotal,
-      minGroupValues: colMinGroupValues,
-      lineItemsMap: colMinGroupLineItemsMap,
+      lineItems,
       axis: 'col',
       values,
     });
+
+    // 행 헤더 열(division)을 붙이기 전에 만들어야 한다. division 은 데이터 열이
+    // 아니므로 맵에 들어가면 getGroupedData 가 행 이름을 0으로 덮어쓴다.
+    const columnsKeyValueMap = getLeafColumnItemsMap(columns);
 
     columns.unshift(getFirstColumn(rowGroup[0]));
 
@@ -178,8 +165,7 @@ export const useCreateTableV2 = () => {
       groupedData: groupedRowData,
       groups: rowGroup,
       showTotal: showRowsTotal,
-      minGroupValues: rowMinGroupValues,
-      lineItemsMap: rowMinGroupLineItemsMap,
+      lineItems,
     });
 
     const data = getGroupedData({ rows, columns: columnsKeyValueMap, values });

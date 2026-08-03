@@ -24,14 +24,25 @@ export type KeyTypeFromItemValue = Exclude<ItemValueType, string[] | boolean | n
 export interface IReportConfig {
   id: string;
   name: string;
-  items: ILineItem[];
-  groups: ILineItemGroup[];
-  rowGroup: ILineItemGroup[];
-  colGroup: ILineItemGroup[];
-  valueGroup: ILineItemGroup[];
-  showRowsTotal: boolean;
-  showColsTotal: boolean;
+  items?: ILineItem[];
+  /** 저장된 보고서에 축 배치가 아직 없을 수 있으므로 모두 optional 이다. */
+  groups?: ILineItemGroup[];
+  rowGroup?: ILineItemGroup[];
+  colGroup?: ILineItemGroup[];
+  valueGroup?: ILineItemGroup[];
+  showRowsTotal?: boolean;
+  showColsTotal?: boolean;
+  created_at?: string;
+  writer?: string; // 담당자
 }
+
+/**
+ * `groupByHierarchical`이 만들어내는 중첩 그룹 트리.
+ * 잎(leaf)은 해당 그룹에 속한 line item 배열이다.
+ */
+export type GroupedData = {
+  [key: string]: GroupedData | ILineItem[];
+};
 
 export type GridGroup = {
   title: string;
@@ -47,21 +58,3 @@ export type GridData = {
   division?: string;
   [key: string]: ItemValueType;
 };
-
-export type TrueOrFalse = 'Y' | 'N';
-
-export interface IReportFormatItem {
-  reportFormatItemUniqueId?: string;
-  reportId?: string;
-  baseYearAndMonth?: string;
-  reportSequenceNumber?: number;
-  reportOrderNumber: number;
-  itemName: string;
-}
-
-export interface IReportFormatItemGroup extends IReportFormatItem {
-  sumTotalYn: TrueOrFalse;
-}
-export interface IReportFormat {
-  reportFormat: IReportFormatInfo;
-}

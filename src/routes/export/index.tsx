@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { FC } from 'react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { IReportConfig } from '@/types';
+import { IReportConfig } from '@/types/create-table.v2';
 import { getAllReports } from '@/libs/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
